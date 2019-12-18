@@ -14,7 +14,10 @@ libtorrent를 이용해 마그넷이나 토렌트 파일의 정보를 보여주�
 
 ## TODO
 
-- 시간에 관계된 데이터 로컬 시간으로?
-- 긴 마그넷 주소로 클릭온카피?
-- raw json말고 좀 더 보기 좋은 포맷으로?
-- api 추가할 사항? flask_restful Resource를 쓸 수 있으면 좀 더 좋을까??
+- LOGIC: 시간에 관계된 데이터 로컬 시간으로?
+- WEBUI: 긴 마그넷 주소로 클릭온카피?
+- WEBUI: raw json말고 좀 더 보기 좋은 포맷으로?
+- LOGIC: api 추가할 사항? 
+- LOGIC: trackers 업데이트 기능
+- FRAMEWORK: flask_restful Resource를 쓸 수 있으면 좀 더 좋지 않을까?
+- ETC: 좀 더 테스트가 필요함.

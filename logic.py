@@ -187,7 +187,7 @@ class Logic(object):
             from plugin import plugin_info
             # platform check - whitelist
             if platform.machine() == 'x86_64' and app.config['config']['running_type'] == 'docker':
-                tarball = os.path.join(os.path.dirname(__file__), plugin_info['libtorrent_tarball'])
+                tarball = os.path.join(os.path.dirname(__file__), 'install', plugin_info['install'])
                 # file existence  check
                 if not os.path.isfile(tarball):
                     return {'success': False, 'log': '파일이 없습니다. {}'.format(os.path.basename(tarball))}

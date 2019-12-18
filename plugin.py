@@ -41,7 +41,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.1",
+    "version": "0.0.0.2",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info_sjva",
     "more": "https://github.com/wiserain/torrent_info_sjva",
@@ -49,7 +49,7 @@ plugin_info = {
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info_sjva/archive/master.zip",
     "icon": "",
-    "libtorrent_tarball": "libtorrent-1.2.3-191217.tar.gz",
+    "install": "libtorrent-1.2.3-191217.tar.gz",
 }
 #########################################################
 
@@ -201,11 +201,16 @@ def api(sub):
             
     elif sub == 'torrent_info_url':
         try:
+            # TODO: 프록시 적용
             res = requests.get(request.form['torrent_url'])
+            res.raise_for_status()                
             torrent_info = Logic.parse_torrent_file(res.content)
             return jsonify({'success': True, 'info': torrent_info})
+        except (requests.exceptions.RequestException, requests.exceptions.ConnectionError) as e:
+            logger.error('Exception:%s', str(e))
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
         except Exception as e:
             logger.error('Exception:%s', str(e))
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
-        
