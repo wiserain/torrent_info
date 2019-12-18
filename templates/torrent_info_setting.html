@@ -1,0 +1,92 @@
+{% extends "base.html" %} {% block content %}
+
+<div>
+    <nav>
+        {{ macros.m_tab_head_start() }} {{ macros.m_tab_head('일반', true) }} {{ macros.m_tab_head_end() }}
+    </nav>
+    <div class="tab-content" id="nav-tabContent">
+        <!-- 일반 -->
+        {{ macros.m_tab_content_start('일반', true) }} 
+        {# {{ macros.setting_global_scheduler_button(arg['scheduler'], arg['is_running']) }} #}
+        <form id="setting" name="setting">
+            {{ macros.setting_button_with_info([['install_btn', '설치하기']], 'libtorrent 설치', 'x86_64 alpine 도커만 지원') }} 
+            {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc='트래커 없이도 정보를 받아오지만 iknowwhatyoudownload.com에 노출될 수 있습니다.') }} 
+            {{ macros.setting_checkbox('scrape', 'Scrape 사용', value=arg['scrape'], desc='피어 정보도 받아옵니다. 활성 토렌트인지 확인할 때 유용. 대신 오래 걸림.') }} 
+            {{ macros.setting_input_int('timeout', '마그넷 시간 초과', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }} 
+            {{ macros.setting_button([['global_setting_save_btn', '저장']]) }}
+        </form>
+
+        {{ macros.m_tab_content_end() }}
+
+    </div>
+    <!--tab-content-->
+</div>
+<!--전체-->
+
+
+
+<script type="text/javascript">
+    var package_name = 'torrent_info';
+    var current_data = null;
+    var default_interface_id = "{{arg['default_interface_id']}}"
+
+    $(document).ready(function() {
+
+        $(function() {
+            $.ajax({
+                url: '/' + package_name + '/ajax/is_installed',
+                type: "POST",
+                cache: false,
+                data: {},
+                dataType: "json",
+                success: function(data) {
+                    if (data.installed) {
+                        $('#install_btn').prop('disabled', true);
+                        $('#install_btn').html('설치됨');
+                        $('#install_btn').parent().next().html('libtorrent v' + data.version);
+                    }
+                }
+            });
+        });
+
+    });
+
+    // 스케쥴링 on / off
+    $('#scheduler').change(function() {
+        var ret = $(this).prop('checked');
+        $.ajax({
+            url: '/' + package_name + '/ajax/scheduler',
+            type: "POST",
+            cache: false,
+            data: {
+                scheduler: ret
+            },
+            dataType: "json",
+            success: function(list) {}
+        });
+    });
+
+    // libtorrent 설치 버튼
+    $("body").on('click', '#install_btn', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/' + package_name + '/ajax/install',
+            type: "POST",
+            cache: false,
+            dataType: "json",
+            success: function(data) {
+                if (data.success) {
+                    $.notify('<strong>성공적으로 설치하였습니다.</strong><br>' + data.log, {
+                        type: 'success'
+                    });
+                } else {
+                    $.notify('<strong>실패하였습니다.</strong><br>' + data.log, {
+                        type: 'warning'
+                    });
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}
