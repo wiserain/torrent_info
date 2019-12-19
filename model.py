@@ -7,19 +7,14 @@ import json
 # third-party
 
 # sjva 공용
-from framework.logger import get_logger
 from framework import db, app, path_app_root
+
 # 패키지
+from .plugin import logger, package_name
 
-# 로그
-package_name = __name__.split('.')[0].split('_sjva')[0]
-logger = get_logger(package_name)
 
-if app.config['config']['run_by_real']:
-    # dir_name = os.path.dirname(__file__)
-    # db_file = dir_name.replace(path_app_root, '').replace('\\', '/') + '/%s.db' % package_name
-    db_file = os.path.join(path_app_root, 'data', 'db', '%s.db' % package_name)
-    app.config['SQLALCHEMY_BINDS'][package_name] = 'sqlite:///%s' % (db_file)
+db_file = os.path.join(path_app_root, 'data', 'db', '%s.db' % package_name)
+app.config['SQLALCHEMY_BINDS'][package_name] = 'sqlite:///%s' % (db_file)
 
 
 class ModelSetting(db.Model):
@@ -29,17 +24,62 @@ class ModelSetting(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
-    value = db.Column(db.String, nullable=False)
+    value = db.Column(db.String(100), nullable=False)
  
     def __init__(self, key, value):
         self.key = key
         self.value = value
 
     def __repr__(self):
-        return repr(self.as_dict())
+        return "<SystemSetting(id:%s, key:%s, value:%s)>" % (self.id, self.key, self.value)
 
     def as_dict(self):
         return {x.name: getattr(self, x.name) for x in self.__table__.columns}
 
+    @staticmethod
+    def get(key):
+        try:
+            return db.session.query(ModelSetting).filter_by(key=key).first().value.strip()
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+    
+    @staticmethod
+    def get_int(key):
+        try:
+            return int(ModelSetting.get(key))
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+    
+    @staticmethod
+    def get_bool(key):
+        try:
+            return (ModelSetting.get(key) == 'True')
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
+    def set(key, value):
+        try:
+            item = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
+            if item is not None:
+                item.value = value.strip()
+                db.session.commit()
+            else:
+                db.session.add(ModelSetting(key, value.strip()))
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
+    def to_dict():
+        try:
+            from framework.util import Util
+            return Util.db_list_to_dict(db.session.query(ModelSetting).all())
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
 #########################################################
 

@@ -20,16 +20,20 @@ from framework import app, db, scheduler
 from framework.util import Util
             
 # 패키지
-from logic import Logic
-from model import ModelSetting
 package_name = __name__.split('.')[0].split('_sjva')[0]
 logger = get_logger(package_name)
+
+from logic import Logic
+from model import ModelSetting
+# from plugin_api import 
 
 blueprint = Blueprint(
     package_name, package_name,
     url_prefix='/%s' % package_name,
     template_folder=os.path.join(os.path.dirname(__file__), 'templates')
 )
+
+# api.add_resource(HelloWorld, '/' + package_name + '/api2')
 
 def plugin_load():
     Logic.plugin_load()
@@ -41,7 +45,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.2",
+    "version": "0.0.0.3",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info_sjva",
     "more": "https://github.com/wiserain/torrent_info_sjva",
@@ -77,18 +81,13 @@ def home():
 def detail(sub):
     logger.debug('menu %s %s', package_name, sub)
     if sub == 'setting':
-        setting_list = db.session.query(ModelSetting).all()
-        arg = Util.db_list_to_dict(setting_list)
-        arg['scheduler'] = str(scheduler.is_include(package_name))
-        arg['is_running'] = str(scheduler.is_running(package_name))
+        arg = ModelSetting.to_dict()
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'magnet':
-        setting_list = db.session.query(ModelSetting).all()
-        arg = Util.db_list_to_dict(setting_list)
+        arg = ModelSetting.to_dict()
         return render_template('%s_magnet.html' % package_name, arg=arg)
     elif sub == 'torrent':
-        setting_list = db.session.query(ModelSetting).all()
-        arg = Util.db_list_to_dict(setting_list)
+        arg = ModelSetting.to_dict()
         return render_template('%s_torrent.html' % package_name, arg=arg)
     elif sub == 'log':
         return render_template('log.html', package=package_name)
@@ -108,20 +107,6 @@ def ajax(sub):
         except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
-    # 스케쥴링 on / off
-    elif sub == 'scheduler':
-        try:
-            go = request.form['scheduler']
-            logger.debug('scheduler:%s', go)
-            if go == 'true':
-                Logic.scheduler_start()
-            else:
-                Logic.scheduler_stop()
-            return jsonify(go)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            return jsonify('fail')
     elif sub == 'install':
         try:
             ret = Logic.install()
@@ -149,8 +134,7 @@ def api(sub):
     logger.debug('api %s %s', package_name, sub)
     if sub == 'magnet_info':
         try:
-            setting_list = db.session.query(ModelSetting).all()
-            arg = Util.db_list_to_dict(setting_list)
+            arg = ModelSetting.to_dict()
             # default arguments from db
             func_args = {
                 'scrape': arg['scrape'] == 'True',
@@ -174,9 +158,9 @@ def api(sub):
     elif sub == 'download_torrent':
         try:
             hash = request.args.get('hash')
-            if hash in Logic.cached_torrent:
-                torrent_file = Logic.cached_torrent[hash]['file']
-                torrent_name = Logic.cached_torrent[hash]['name']
+            if hash in Logic.torrent_cache:
+                torrent_file = Logic.torrent_cache[hash]['file']
+                torrent_name = Logic.torrent_cache[hash]['name']
                 resp = Response(torrent_file)
                 resp.headers['Content-Type'] = 'application/x-bittorrent'
                 resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_name + '.torrent'))
