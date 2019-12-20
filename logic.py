@@ -28,18 +28,22 @@ from .model import ModelSetting
 
 class LimitedSizeDict(OrderedDict):
     def __init__(self, *args, **kwds):
-        self.size_limit = kwds.pop("size_limit", None)
+        self.size = kwds.pop('size', None)
         OrderedDict.__init__(self, *args, **kwds)
-        self._check_size_limit()
+        self._limit_size()
 
     def __setitem__(self, key, value):
         OrderedDict.__setitem__(self, key, value)
-        self._check_size_limit()
+        self._limit_size()
 
-    def _check_size_limit(self):
-        if self.size_limit is not None:
-            while len(self) > self.size_limit:
+    def _limit_size(self):
+        if self.size is not None:
+            while len(self) > self.size:
                 self.popitem(last=False)
+
+    def sizeto(self, new_size):
+        self.size = new_size
+        self._limit_size()
 
 
 class Logic(object):
@@ -102,8 +106,8 @@ class Logic(object):
             #
             # 자동시작 옵션이 있으면 보통 여기서
             #
-            # 토렌트 캐쉬 생성
-            Logic.torrent_cache = LimitedSizeDict(size_limit=ModelSetting.get_int('cache_size'))
+            # 토렌트 캐쉬
+            Logic.torrent_cache = LimitedSizeDict(size=ModelSetting.get_int('cache_size'))
 
             # libtorrent 자동 설치
             if not Logic.is_installed():
@@ -128,8 +132,10 @@ class Logic(object):
                 entity = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
                 entity.value = value
             db.session.commit()
-            return True                  
-        except Exception as e: 
+            # cache size도 변경해줘야...
+            Logic.torrent_cache.sizeto(ModelSetting.get_int('cache_size'))
+            return True
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
             return False
@@ -201,7 +207,7 @@ class Logic(object):
         }
 
     @staticmethod            
-    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=30, trackers=None):
+    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=30, trackers=None, no_cache=False):
         try:
             import libtorrent as lt
         except ImportError:
@@ -232,7 +238,7 @@ class Logic(object):
         
         # 캐시에 있으면 ...
         info_hash_from_magnet = str(params['info_hash'] if type(params) == type({}) else params.info_hash)
-        if info_hash_from_magnet in Logic.torrent_cache:
+        if (info_hash_from_magnet in Logic.torrent_cache) and not no_cache:
             return Logic.torrent_cache[info_hash_from_magnet]['info']
 
         # session

@@ -45,7 +45,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.3",
+    "version": "0.0.0.4",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info_sjva",
     "more": "https://github.com/wiserain/torrent_info_sjva",
@@ -125,6 +125,19 @@ def ajax(sub):
         except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+    elif sub == 'cache':
+        try:
+            if request.form.get('clear', False):
+                Logic.torrent_cache.clear()
+            if 'new_size' in request.form:
+                new_size = max(0, min(256, int(request.form['new_size'])))
+                Logic.torrent_cache.sizeto(new_size)
+                ModelSetting.set('cache_size', str(new_size))
+            return jsonify({'success': True, 'len': len(Logic.torrent_cache), 'size': Logic.torrent_cache.size})
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
 
 #########################################################
 # API
@@ -157,19 +170,28 @@ def api(sub):
             
     elif sub == 'download_torrent':
         try:
-            hash = request.args.get('hash')
-            if hash in Logic.torrent_cache:
-                torrent_file = Logic.torrent_cache[hash]['file']
-                torrent_name = Logic.torrent_cache[hash]['name']
-                resp = Response(torrent_file)
-                resp.headers['Content-Type'] = 'application/x-bittorrent'
-                resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_name + '.torrent'))
-                return resp
-            else:
-                logger.warning('hash expired: %s', hash)
+            if request.method == 'POST':
+                hash = request.form.get('hash', '')
+                if hash in Logic.torrent_cache:
+                    return jsonify({
+                        'success': True, 
+                        'download_url': '/{}/api/{}?hash={}'.format(package_name, sub, hash)
+                    })
+                else:
+                    return jsonify({'success': False, 'log': '캐시에 없는 파일은 다운받을 수 없습니다.'})
+            elif request.method == 'GET':
+                hash = request.args.get('hash', '')
+                if hash in Logic.torrent_cache:
+                    torrent_file = Logic.torrent_cache[hash]['file']
+                    torrent_info = Logic.torrent_cache[hash]['info']
+                    resp = Response(torrent_file)
+                    resp.headers['Content-Type'] = 'application/x-bittorrent'
+                    resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_info['name'] + '.torrent'))
+                    return resp
         except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
             
     elif sub == 'torrent_info_file':
         try:
@@ -194,6 +216,15 @@ def api(sub):
             logger.error('Exception:%s', str(e))
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
+        except Exception as e:
+            logger.error('Exception:%s', str(e))
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
+            
+    elif sub == 'cached_info':
+        try:
+            cached = [val['info'] for key, val in Logic.torrent_cache.iteritems()]
+            return jsonify({'success': True, 'info': cached})
         except Exception as e:
             logger.error('Exception:%s', str(e))
             logger.error(traceback.format_exc())
