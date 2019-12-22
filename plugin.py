@@ -45,7 +45,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.4",
+    "version": "0.0.0.5",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info_sjva",
     "more": "https://github.com/wiserain/torrent_info_sjva",
@@ -145,7 +145,7 @@ def ajax(sub):
 @blueprint.route('/api/<sub>', methods=['GET', 'POST'])
 def api(sub):
     logger.debug('api %s %s', package_name, sub)
-    if sub == 'magnet_info':
+    if sub == 'from_magnet':
         try:
             arg = ModelSetting.to_dict()
             # default arguments from db
@@ -161,9 +161,9 @@ def api(sub):
                 if key in func_args:
                     func_args[key] = request.form
 
-            magnet_info = Logic.parse_magnet_uri(request.form['magnet_uri'], **func_args)
-            return jsonify({'success': True, 'info': magnet_info})
-        except Exception as e: 
+            torrent_info = Logic.parse_magnet_uri(request.form['magnet_uri'], **func_args)
+            return jsonify({'success': True, 'info': torrent_info})
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
             return jsonify({'sueecss': False, 'log': str(e)})
@@ -193,7 +193,7 @@ def api(sub):
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
             
-    elif sub == 'torrent_info_file':
+    elif sub == 'from_file':
         try:
             fs = request.files['file']
             fs.seek(0)
@@ -205,23 +205,19 @@ def api(sub):
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
             
-    elif sub == 'torrent_info_url':
+    elif sub == 'from_url':
         try:
             # TODO: 프록시 적용
             res = requests.get(request.form['torrent_url'])
             res.raise_for_status()                
-            torrent_info = Logic.parse_torrent_file(res.content)
+            torrent_info = Logic.parse_torrent_file(res.content)  
             return jsonify({'success': True, 'info': torrent_info})
-        except (requests.exceptions.RequestException, requests.exceptions.ConnectionError) as e:
-            logger.error('Exception:%s', str(e))
-            logger.error(traceback.format_exc())
-            return jsonify({'success': False, 'log': str(e)})
         except Exception as e:
             logger.error('Exception:%s', str(e))
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
             
-    elif sub == 'cached_info':
+    elif sub == 'from_cache':
         try:
             cached = [val['info'] for key, val in Logic.torrent_cache.iteritems()]
             return jsonify({'success': True, 'info': cached})

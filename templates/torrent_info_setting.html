@@ -2,7 +2,10 @@
 
 <div>
     <nav>
-        {{ macros.m_tab_head_start() }} {{ macros.m_tab_head('일반', true) }} {{ macros.m_tab_head_end() }}
+        {{ macros.m_tab_head_start() }} 
+            {{ macros.m_tab_head('일반', true) }} 
+            {{ macros.m_tab_head('트래커(개발중)', false) }} 
+        {{ macros.m_tab_head_end() }}
     </nav>
     <div class="tab-content" id="nav-tabContent">
         <!-- 일반 -->
@@ -11,12 +14,19 @@
             {{ macros.setting_button_with_info([['install_btn', '설치하기']], 'libtorrent 설치', 'x86_64 alpine 도커만 지원. 네이티브라면 직접 설치 후 새로고침 해 보세요.') }}
             {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc='트래커 없이도 정보를 받아오지만 iknowwhatyoudownload.com에 노출될 수 있습니다.') }}
             {{ macros.setting_checkbox('scrape', 'Scrape 사용', value=arg['scrape'], desc='피어 정보도 받아옵니다. 활성 토렌트인지 확인할 때 유용. 대신 오래 걸림.') }}
-            {{ macros.setting_input_int('timeout', '시간 초과', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }}
+            {{ macros.setting_input_int('timeout', '대기 시간', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }}
             {{ macros.setting_input_int('cache_size', '검색 결과 저장', value=arg['cache_size'], min='0', max='256', placeholder='10', desc='최근 검색 결과를 info_hash 기준으로 저장합니다. 단위: 갯수') }}
             {{ macros.setting_button_with_info([['clear_cache_btn', '재설정']], '검색 결과 비우기', '') }}
             {{ macros.setting_button([['global_setting_save_btn', '저장']]) }}
         </form>
+        {{ macros.m_tab_content_end() }}
+        <!-- 트래커 -->
+        {{ macros.m_tab_content_start('트래커(개발중)', false) }}
+        <form id="setting" name="setting">
+            {{ macros.setting_input_textarea('trackers', '보조 트래커', value=arg['trackers'], desc=['마그넷이나 토렌트 파일에 트래커가 없는 경우 보조로 사용합니다.']) }}
+            {{ macros.setting_input_int('trackers_update_every', '자동 업데이트', value=arg['trackers_update_every'], min='0', placeholder='30', desc='https://github.com/ngosang/trackerslist의 best_ip 20개를 받아옵니다. 0이면 업데이트 하지 않음. 주기: 일') }}
 
+        </form>
         {{ macros.m_tab_content_end() }}
 
     </div>

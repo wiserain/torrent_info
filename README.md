@@ -17,14 +17,21 @@ libtorrent가 설치가능한 모든 환경.
 
 ## 더 읽어보기
 
+## Changelog
+
+v0.0.0.5
+- WEBUI: 결과를 json 대신 좀 더 보기 좋은 포맷으로
+- WEBUI: 항목 클릭해서 복사
+- WEBUI: magnet:?xt=urn:btih:로 시작안하는 마그넷은 인포해쉬로 간주
+
+v0.0.0.4
+- LOGIC: 자체 캐시를 좀 더 적극적으로 활용, 웹에서 검색시 등...
+
 ## TODO
 
 - FRAMEWORK: flask_restful Resource를 쓸 수 있으면 좀 더 좋지 않을까?
-- LOGIC: api 추가할 사항?
-- LOGIC: trackers 업데이트 기능
+- LOGIC: api 정리. flask_restful 이용
+- LOGIC: 사용자 트래커 기능
 - LOGIC: 시간에 관계된 데이터 로컬 시간으로?
-- WEBUI: 긴 마그넷 주소로 클릭온카피?
-- WEBUI: raw json말고 좀 더 보기 좋은 포맷으로?
-- ETC: 좀 더 테스트가 필요함.
-- ~~LOGIC: 자체 캐시를 좀 더 적극적으로 활용, 웹에서 검색시 등...~~
 - LOGIC: --no-cache 옵션
+- WEBUI: cosmetic issue, button align, responsive view

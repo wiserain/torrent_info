@@ -21,17 +21,40 @@
 </form>
 <!--전체-->
 
+<style type="text/css">
+    table .table {
+        margin: 0;
+    }
+    
+    tr th {
+        width: 100px;
+    }
+    
+    table td ul {
+        padding-left: 0 !important;
+        list-style-position: inside;
+        list-style-type: decimal;
+    }
+
+    table .table th {
+        border-top: none;
+        border-bottom: none;
+    }
+</style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
 <script type="text/javascript">
     var package_name = 'torrent_info';
     var current_info = null;
+    var bytes_in_si = true;
     const result_li_div = '<div class="card mt-3 mb-3" id="results-li"></div>';
 
     $(document).ready(function() {
 
         $(function() {
             $.ajax({
-                url: '/' + package_name + '/api/cached_info',
+                url: '/' + package_name + '/api/from_cache',
                 type: "POST",
                 cache: false,
                 data: {},
@@ -39,8 +62,8 @@
                 success: function(data) {
                     if (data.success) {
                         if (data.info.length) {
-                            data.info.forEach(function(element){ 
-                                update_single_result(element, false); 
+                            data.info.forEach(function(item){ 
+                                render_single_item(item, false); 
                             });
                         }
                     }
@@ -67,7 +90,7 @@
       var form_data = new FormData();
       form_data.append('file',current_file);
       $.ajax({
-          url: '/' + package_name + '/api/torrent_info_file',
+          url: '/' + package_name + '/api/from_file',
           type: "POST",
           cache: false,
           data: form_data,
@@ -75,7 +98,7 @@
           contentType: false,
           success: function(data) {
               if (data.success) {
-                  update_single_result(data.info);
+                  render_single_item(data.info);
               } else {
                   $.notify('<strong>실패하였습니다!!!</strong><br>' + data.log, {
                       type: 'warning'
@@ -95,7 +118,7 @@
             return;
         }
         $.ajax({
-            url: '/' + package_name + '/api/torrent_info_url',
+            url: '/' + package_name + '/api/from_url',
             type: "POST",
             cache: false,
             data: {
@@ -104,7 +127,7 @@
             dataType: "json",
             success: function(data) {
                 if (data.success) {
-                    update_single_result(data.info);
+                    render_single_item(data.info);
                 } else {
                     $.notify('<strong>실패하였습니다!!!</strong><br>' + data.log, {
                         type: 'warning'
@@ -114,24 +137,22 @@
         });
     });
 
-
-    function update_single_result(data, show_info=true) {
+    function render_single_item(data, show_info=true) {
         let torrent_file_name = data.name + '.torrent';
         let torrent_file_href = data.info_hash;
-        let etime = ("time_metadata" in data) ? data.time_metadata : null;
-        if ( !etime ) etime += Number(("time_scrape" in data) ? data.time_scrape : 0);
-        str = `                
+        let etime = ("time" in data) ? data.time.total.toFixed(3) + ' 초' : '';
+        str = `
         <div class="card-header" id="item-header">
             <div class="d-flex w-100 justify-content-between">
                 <h7 class="text-truncate" style="flex: 1;">
                     <a href="${torrent_file_href}" id="torrent_file">${torrent_file_name}</a>
                 </h7>
-                <small text-muted>${etime ? etime.toFixed(3) : '-'} 초</small>
+                <small text-muted>${etime}</small>
             </div>
         </div>
         <ul class="list-group list-group-flush collapse${show_info ? ' show' : ''}">
             <li class="list-group-item">
-                <pre>${JSON.stringify(data, null, 2)}</pre>
+                <div class="table-responsive">${make_table_from_json(data)}</div>
             </li>
         </ul>
         `
@@ -140,9 +161,81 @@
         }
         $("#results-li").prepend(str);
     }
+
+    function make_table_from_json(data) {
+        str = `
+        <tr><th>이름</th><td>${data.name}<button id="clicktocopy" class="btn btn-sm btn-light ml-2"><i class="fa fa-copy"></i></button></td></th></tr>
+        <tr><th>전체 크기</th><td>${sizeOf(data.total_size, true)}</td></th></tr>
+        ${(data.num_files > 1) ? `<tr><th>파일 수</th><td>${data.num_files}</td></th></tr>` : ''}
+        ${(data.num_files > 1) ? `<tr><th>파일 리스트</th><td style="padding:0 !important;">${make_filelist(data.files, data.name + '/')}</td></th></tr>` : '' }
+        <tr><th>조각 수</th><td>${data.num_pieces}</td></th></tr>
+        <tr><th>해쉬값</th><td>${data.info_hash}<button id="clicktocopy" class="btn btn-sm btn-light ml-2"><i class="fa fa-copy"></i></button></td></th></tr>
+        <tr><th>마그넷 주소</th><td>${data.magnet_uri}<button id="clicktocopy" class="btn btn-sm btn-light ml-2"><i class="fa fa-copy"></i></button></td></th></tr>
+        ${(data.hasOwnProperty('seeders')) ? `<tr><th>시더 수</th><td>${data.seeders}</td></th></tr>` : ''}
+        ${(data.hasOwnProperty('peers')) ? `<tr><th>피어 수</th><td>${data.peers}</td></th></tr>` : ''}
+        ${(data.hasOwnProperty('trackers')) ? `<tr><th>트래커</th><td>${make_trackerlist(data.trackers)}</td></th></tr>` : ''}
+        <tr><th>생성일</th><td>${data.creation_date}</td></th></tr>
+        ${(data.creator.length) ? `<tr><th>생성 프로그램</th><td>${data.creator}</td></th></tr>` : ''}
+        ${(data.comment.length) ? `<tr><th>코멘트</th><td>${data.comment}</td></th></tr>` : ''}
+        ${(data.hasOwnProperty('time')) ? `<tr><th>걸린 시간</th><td>${data.time.total.toFixed(3)} 초</td></th></tr>` : ''}
+        `
+
+        tbl_node = `<table class="table table-sm table-hover"><tbody>${str}</tbody></table>`
+        return tbl_node;
+    }
+
+    function make_filelist(files, dirname) {
+        str = `
+        <thead><tr>
+            <th scope="col">
+				<div style="float: left;">파일 경로/이름</div>
+				<div style="float: right;"><span class="font-weight-normal pr-1" style="font-size: small;">${dirname}</span></div>
+			</th>
+            <th scope="col" style="text-align: right;">크기</th>
+        </tr></thead>
+        <tbody style="font-size: small;">
+        `
+        for (i in files) {
+            str += `
+            <tr>
+                <td>${files[i].path.replace(dirname, '')}</td>
+                <td style="text-align: right;">${sizeOf(files[i].size, true)}</td>
+            </tr>`
+        }
+
+        tbl_node = `<table class="table table-sm table-hover">${str}</tbody></table>`
+        return tbl_node;
+    }
+
+    function make_trackerlist(trackers) {
+        str = ''
+        for (i in trackers) {
+            str += `<li>${trackers[i]}</li>`
+        }
+
+        ul_node = `<ul>${str}</ul>`
+        return ul_node;
+    }
+    
+    function sizeOf(bytes, _with) {
+        var thresh = bytes_in_si ? 1000 : 1024;
+        var units = bytes_in_si 
+            ? ['kB','MB','GB','TB','PB','EB','ZB','YB']
+            : ['KiB','MiB','GiB','TiB','PiB','EiB','ZiB','YiB'];
+        // human readable size
+        if(Math.abs(bytes) < thresh) {
+            return _with ? bytes + ' B' : bytes;
+        }
+        var u = -1;
+        do {
+            bytes /= thresh;
+            ++u;
+        } while(Math.abs(bytes) >= thresh && u < units.length - 1);
+        return _with ? bytes.toFixed(2)+' '+units[u] : parseFloat(bytes.toFixed(2));
+    }
+
     
     $("body").on('click', '#item-header', function(e) {
-        {# $(this).next('ul').children('li').toggle(); #}
         $(this).next('ul').toggle();
     });
 
@@ -169,6 +262,21 @@
         });
     })
     
+    $("body").on('click', '#clicktocopy', function(e) {
+        txt2copy = this.previousSibling.nodeValue;
+
+        var $tempElement = $("<input>");
+        $("body").append($tempElement);
+        $tempElement.val(txt2copy).select();
+        document.execCommand("Copy");
+        $tempElement.remove();
+
+        $.notify('<strong>복사하였습니다.</strong><br>' + txt2copy, {
+            type: 'success'
+        });
+    });
+    
+
 </script>
 
 

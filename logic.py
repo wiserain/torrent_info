@@ -4,15 +4,17 @@
 import os
 import sys
 import traceback
-from datetime import datetime, timedelta
 import logging
 import subprocess
 import json
 import time
 import random
+import math
 from collections import OrderedDict
+from datetime import datetime, timedelta
 
 # third-party
+import requests
 
 # sjva 공용
 from framework import db, scheduler, app
@@ -76,7 +78,9 @@ class Logic(object):
             'udp://176.113.71.19:6961/announce',
             'udp://184.105.151.164:6969/announce',
         ]),
-        'cache_size': '10'
+        'cache_size': '10',
+        'trackers_last_update': datetime.now().strftime('%Y-%m-%d'),
+        'trackers_update_every': 30,
     }
 
     torrent_cache = None
@@ -142,6 +146,13 @@ class Logic(object):
 
     # 기본 구조 End
     ##################################################################
+
+    # @staticmethod
+    # def update_tracker():
+    #     # https://github.com/ngosang/trackerslist
+    #     trackers_url_from = 'https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best_ip.txt'
+    #     new_trackers = requests.get(trackers_url_from).get.content.decode('utf8').split('\n\n')[:-1]
+
 
     @staticmethod
     def is_installed():
@@ -282,7 +293,7 @@ class Logic(object):
         torrent_info.update({
             'trackers': params.trackers if type(params) != type({}) else params['trackers'],
             'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat(),    # TODO: localtime?
-            'time_metadata': timeout - timeout_value,
+            'time': {'total': timeout - timeout_value, 'metadata': timeout - timeout_value},
         })
 
         if scrape:
@@ -300,16 +311,16 @@ class Logic(object):
             torrent_info.update({
                 'seeders': torrent_status.num_complete,
                 'peers': torrent_status.num_incomplete,
-                'time_scrape': timeout - timeout_value,
             })
+            torrent_info['time']['scrape'] = timeout - timeout_value
+            torrent_info['time']['total'] = torrent_info['time']['metadata'] + torrent_info['time']['scrape']
             
         session.remove_torrent(handle, True)
 
         # caching for later use
         Logic.torrent_cache[torrent_info['info_hash']] = {
-            'name': torrent_info['name'],
             'file': torrent_file,
-            'info': torrent_info
+            'info': torrent_info,
         }
         return torrent_info
 
@@ -328,13 +339,11 @@ class Logic(object):
 
         # caching for later use
         Logic.torrent_cache[torrent_info['info_hash']] = {
-            'name': torrent_info['name'],
             'file': torrent_file,
-            'info': torrent_info
+            'info': torrent_info,
         }
         return torrent_info
 
     @staticmethod
     def parse_torrent_url(url):
-        import requests
         return Logic.parse_torrent_file(requests.get(url).content)
