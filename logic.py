@@ -79,8 +79,8 @@ class Logic(object):
             'udp://184.105.151.164:6969/announce',
         ]),
         'cache_size': '10',
-        'trackers_last_update': datetime.now().strftime('%Y-%m-%d'),
-        'trackers_update_every': 30,
+        'tracker_last_update': datetime.now().strftime('%Y-%m-%d'),
+        'tracker_update_every': 30,
     }
 
     torrent_cache = None
@@ -116,6 +116,13 @@ class Logic(object):
             # libtorrent 자동 설치
             if not Logic.is_installed():
                 Logic.install()
+
+            # tracker 자동 업데이트
+            tracker_update_every = ModelSetting.get_int('tracker_update_every')
+            tracker_last_update = ModelSetting.get('tracker_last_update')
+            if tracker_update_every > 0:
+                if (datetime.now() - datetime.strptime(tracker_last_update, '%Y-%m-%d')).days >= tracker_update_every:
+                    Logic.update_tracker()
         except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -147,12 +154,24 @@ class Logic(object):
     # 기본 구조 End
     ##################################################################
 
-    # @staticmethod
-    # def update_tracker():
-    #     # https://github.com/ngosang/trackerslist
-    #     trackers_url_from = 'https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best_ip.txt'
-    #     new_trackers = requests.get(trackers_url_from).get.content.decode('utf8').split('\n\n')[:-1]
+    @staticmethod
+    def tracker_save(req):
+        for key, value in req.form.items():
+            logger.debug({'key': key, 'value': value})
+            if key == 'trackers':
+                value = json.dumps(value.split('\n'))
+            logger.debug('Key:%s Value:%s', key, value)
+            entity = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
+            entity.value = value
+        db.session.commit()
 
+    @staticmethod
+    def update_tracker():
+        # https://github.com/ngosang/trackerslist
+        trackers_url_from = 'https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best_ip.txt'
+        new_trackers = requests.get(trackers_url_from).content.decode('utf8').split('\n\n')[:-1]
+        ModelSetting.set('trackers', json.dumps(new_trackers))
+        ModelSetting.set('tracker_last_update', datetime.now().strftime('%Y-%m-%d'))
 
     @staticmethod
     def is_installed():
@@ -292,7 +311,7 @@ class Logic(object):
         torrent_info = Logic.convert_torrent_info(lt_info)
         torrent_info.update({
             'trackers': params.trackers if type(params) != type({}) else params['trackers'],
-            'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat(),    # TODO: localtime?
+            'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat(),
             'time': {'total': timeout - timeout_value, 'metadata': timeout - timeout_value},
         })
 
@@ -335,7 +354,7 @@ class Logic(object):
         torrent_info = Logic.convert_torrent_info(lt_info)
         if b'announce-list' in torrent_dict:
             torrent_info.update({'trackers': [x.decode('utf-8') for x in torrent_dict[b'announce-list'][0]]})
-        torrent_info.update({'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date'])})
+        torrent_info.update({'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat()})
 
         # caching for later use
         Logic.torrent_cache[torrent_info['info_hash']] = {

@@ -8,11 +8,11 @@ import sys
 import traceback
 import json
 from urllib import quote
-import requests
 
 # third-party
 from flask import Blueprint, request, render_template, redirect, jsonify, Response
 from flask_login import login_required
+import requests
 
 # sjva 공용
 from framework.logger import get_logger
@@ -45,7 +45,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.5",
+    "version": "0.0.0.6",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info_sjva",
     "more": "https://github.com/wiserain/torrent_info_sjva",
@@ -62,7 +62,7 @@ plugin_info = {
 menu = {
     'main': [package_name, '토렌트 정보'],
     'sub': [
-        ['setting', '설정'], ['magnet', '마그넷'], ['torrent', '토렌트'], ['log', '로그']
+        ['setting', '설정'], ['search', '검색'], ['log', '로그']
     ],
     'category': 'torrent',
 }
@@ -73,7 +73,7 @@ menu = {
 #########################################################
 @blueprint.route('/')
 def home():
-    return redirect('/%s/magnet' % package_name)
+    return redirect('/%s/search' % package_name)
 
 
 @blueprint.route('/<sub>')
@@ -82,13 +82,11 @@ def detail(sub):
     logger.debug('menu %s %s', package_name, sub)
     if sub == 'setting':
         arg = ModelSetting.to_dict()
+        arg['trackers'] = '\n'.join(json.loads(arg['trackers']))
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
-    elif sub == 'magnet':
+    elif sub == 'search':
         arg = ModelSetting.to_dict()
-        return render_template('%s_magnet.html' % package_name, arg=arg)
-    elif sub == 'torrent':
-        arg = ModelSetting.to_dict()
-        return render_template('%s_torrent.html' % package_name, arg=arg)
+        return render_template('%s_search.html' % package_name, arg=arg)
     elif sub == 'log':
         return render_template('log.html', package=package_name)
     return render_template('sample.html', title='%s - %s' % (package_name, sub))
@@ -134,6 +132,22 @@ def ajax(sub):
                 Logic.torrent_cache.sizeto(new_size)
                 ModelSetting.set('cache_size', str(new_size))
             return jsonify({'success': True, 'len': len(Logic.torrent_cache), 'size': Logic.torrent_cache.size})
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
+    elif sub == 'tracker_update':
+        try:
+            Logic.update_tracker()
+            return jsonify({'success': True})
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
+    elif sub == 'tracker_save':
+        try:
+            Logic.tracker_save(request)
+            return jsonify({'success': True})
         except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
