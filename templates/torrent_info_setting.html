@@ -4,7 +4,7 @@
     <nav>
         {{ macros.m_tab_head_start() }} 
             {{ macros.m_tab_head('일반', true) }} 
-            {{ macros.m_tab_head('트래커(개발중)', false) }} 
+            {{ macros.m_tab_head('트래커', false) }} 
         {{ macros.m_tab_head_end() }}
     </nav>
     <div class="tab-content" id="nav-tabContent">
@@ -20,12 +20,14 @@
             {{ macros.setting_button([['global_setting_save_btn', '저장']]) }}
         </form>
         {{ macros.m_tab_content_end() }}
-        <!-- 트래커 -->
-        {{ macros.m_tab_content_start('트래커(개발중)', false) }}
-        <form id="setting" name="setting">
-            {{ macros.setting_input_textarea('trackers', '보조 트래커', value=arg['trackers'], desc=['마그넷이나 토렌트 파일에 트래커가 없는 경우 보조로 사용합니다.']) }}
-            {{ macros.setting_input_int('trackers_update_every', '자동 업데이트', value=arg['trackers_update_every'], min='0', placeholder='30', desc='https://github.com/ngosang/trackerslist의 best_ip 20개를 받아옵니다. 0이면 업데이트 하지 않음. 주기: 일') }}
 
+        <!-- 트래커 -->
+        {{ macros.m_tab_content_start('트래커', false) }}
+        <form id="setting_tracker" name="setting_tracker">
+            {{ macros.setting_input_textarea('trackers', '보조 트래커', value=arg['trackers'], row='20', desc=['마그넷에 트래커가 없는 경우 보조로 사용합니다. Enter로 구분']) }}
+            {{ macros.setting_input_int('tracker_update_every', '자동 업데이트', value=arg['tracker_update_every'], min='0', placeholder='15', desc='https://github.com/ngosang/trackerslist의 best_ip 20개를 받아옵니다. 0이면 업데이트 하지 않음. 주기: 일') }}
+            {{ macros.setting_button_with_info([['tracker_update_now_btn', '지금 업데이트']], '수동 업데이트', '최근 업데이트: ' ~ arg['tracker_last_update']) }}
+            {{ macros.setting_button([['tracker_setting_save_btn', '저장']]) }}
         </form>
         {{ macros.m_tab_content_end() }}
 
@@ -119,6 +121,57 @@
             data: {clear: true, new_size: document.getElementById("cache_size").value},
             success: function(data) {
                 update_cache_status(data);
+            }
+        });
+    });
+
+    // 트래커 업데이트
+    function update_trackers(data) {
+        if (data.success) {
+            $('#tracker_update_now_btn').parent().next().html(
+                '<em>성공적으로 업데이트하였습니다. 새로고침하여 확인</em>'
+            );
+        } else {
+            $('#tracker_update_now_btn').parent().next().html(
+                '<em>문제가 있습니다: ' + data.log + '</em>'
+            );
+        }
+    }
+
+    // update_tracker 버튼
+    $("body").on('click', '#tracker_update_now_btn', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/' + package_name + '/ajax/tracker_update',
+            type: "POST",
+            cache: false,
+            dataType: "json",
+            data: {},
+            success: function(data) {
+                update_trackers(data);
+            }
+        });
+    });
+
+    // tracker_setting_save_btn 버튼
+    $("body").on('click', '#tracker_setting_save_btn', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/' + package_name + '/ajax/tracker_save',
+            type: "POST",
+            cache: false,
+            dataType: "json",
+            data: get_formdata('#setting_tracker'),
+            success: function(data) {
+                if (data.success) {
+                    $.notify('<strong>설정을 저장하였습니다.</strong>', {
+                        type: 'success'
+                    });
+                } else {
+                    $.notify('<strong>설정 저장에 실패하였습니다.</strong><br>' + data.log, {
+                        type: 'warning'
+                    });
+                }
             }
         });
     });
