@@ -19,6 +19,12 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.0.7 - libtorrent-1.2.3-191227.tar.gz
+- alpine3.10
+- python2.7.17
+- libboost1.71
+- libtorrent1.2.3
+
 v0.0.0.6
 - WEBUI: 마그넷 + 토렌트 파일 하나로 통합
 - LOGIC: 사용자 트래커 기능

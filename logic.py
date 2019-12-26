@@ -80,7 +80,8 @@ class Logic(object):
         ]),
         'cache_size': '10',
         'tracker_last_update': datetime.now().strftime('%Y-%m-%d'),
-        'tracker_update_every': 30,
+        'tracker_update_every': '30',
+        'libtorrent_build': '191217',
     }
 
     torrent_cache = None
@@ -114,7 +115,9 @@ class Logic(object):
             Logic.torrent_cache = LimitedSizeDict(size=ModelSetting.get_int('cache_size'))
 
             # libtorrent 자동 설치
-            if not Logic.is_installed():
+            new_build = int(plugin_info['install'].split('-')[-1].split('.')[0])
+            installed_build = ModelSetting.get_int('libtorrent_build')
+            if (new_build > installed_build) or (not Logic.is_installed()):
                 Logic.install()
 
             # tracker 자동 업데이트
@@ -203,6 +206,8 @@ class Logic(object):
                 if lt_ver:
                     ret['success'] = True
                     ret['log'] = 'libtorrent v{}'.format(lt_ver)
+                    # 현재 설치된 빌드 번호 업데이트
+                    ModelSetting.set('libtorrent_build', plugin_info['install'].split('-')[-1].split('.')[0])
                 else:
                     ret['success'] = False
                     ret['log'] = '설치 후 알수없는 에러. 개발자에게 보고바람'
