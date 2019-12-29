@@ -273,7 +273,7 @@ class Logic(object):
         
         # 캐시에 있으면 ...
         info_hash_from_magnet = str(params['info_hash'] if type(params) == type({}) else params.info_hash)
-        if (info_hash_from_magnet in Logic.torrent_cache) and not no_cache:
+        if (not no_cache) and (info_hash_from_magnet in Logic.torrent_cache):
             return Logic.torrent_cache[info_hash_from_magnet]['info']
 
         # session
@@ -342,10 +342,11 @@ class Logic(object):
         session.remove_torrent(handle, True)
 
         # caching for later use
-        Logic.torrent_cache[torrent_info['info_hash']] = {
-            'file': torrent_file,
-            'info': torrent_info,
-        }
+        if Logic.torrent_cache is not None:
+            Logic.torrent_cache[torrent_info['info_hash']] = {
+                'file': torrent_file,
+                'info': torrent_info,
+            }
         return torrent_info
 
     @staticmethod
@@ -362,10 +363,11 @@ class Logic(object):
         torrent_info.update({'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat()})
 
         # caching for later use
-        Logic.torrent_cache[torrent_info['info_hash']] = {
-            'file': torrent_file,
-            'info': torrent_info,
-        }
+        if Logic.torrent_cache is not None:
+            Logic.torrent_cache[torrent_info['info_hash']] = {
+                'file': torrent_file,
+                'info': torrent_info,
+            }
         return torrent_info
 
     @staticmethod
