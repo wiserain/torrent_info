@@ -15,7 +15,7 @@ import requests
 
 # sjva 공용
 from framework.logger import get_logger
-from framework import app, db, scheduler, api
+from framework import app, db, scheduler
 
 # 패키지
 package_name = __name__.split('.')[0].split('_sjva')[0]
