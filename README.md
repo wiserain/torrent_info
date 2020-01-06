@@ -19,6 +19,13 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.0.9
+- LOGIC: 코드 정리, 소소한 수정
+- WEBUI: magnet uri text-truncate
+
+v0.0.0.8
+- LOGIC: 캐시 임시 수정
+
 v0.0.0.7 - libtorrent-1.2.3-191227.tar.gz
 - alpine3.10
 - python2.7.17
@@ -40,6 +47,9 @@ v0.0.0.4
 
 ## TODO
 
-- LOGIC: api 정리. flask_restful 이용
+- LOGIC: flask_restful 이용해서 api 정리 (sjva에서 설치가 제거된 것 같음)
 - LOGIC: --no-cache 옵션
 - WEBUI: cosmetic issue, button align, responsive view
+- LOGIC: retry 옵션
+- LOGIC: proxy 적용
+- LOGIC: 메모리 캐시에서 db를 이용하는 것은 잠시 보류

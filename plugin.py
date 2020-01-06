@@ -4,7 +4,6 @@
 #########################################################
 # python
 import os
-import sys
 import traceback
 import json
 from urllib import quote
@@ -16,16 +15,14 @@ import requests
 
 # sjva 공용
 from framework.logger import get_logger
-from framework import app, db, scheduler
-from framework.util import Util
-            
+from framework import app, db, scheduler, api
+
 # 패키지
 package_name = __name__.split('.')[0].split('_sjva')[0]
 logger = get_logger(package_name)
 
 from logic import Logic
 from model import ModelSetting
-# from plugin_api import 
 
 blueprint = Blueprint(
     package_name, package_name,
@@ -33,7 +30,6 @@ blueprint = Blueprint(
     template_folder=os.path.join(os.path.dirname(__file__), 'templates')
 )
 
-# api.add_resource(HelloWorld, '/' + package_name + '/api2')
 
 def plugin_load():
     Logic.plugin_load()
@@ -45,7 +41,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.8",
+    "version": "0.0.0.9",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info_sjva",
     "more": "https://github.com/wiserain/torrent_info_sjva",
@@ -90,6 +86,7 @@ def detail(sub):
     elif sub == 'log':
         return render_template('log.html', package=package_name)
     return render_template('sample.html', title='%s - %s' % (package_name, sub))
+
 
 #########################################################
 # For UI                                                          
@@ -153,6 +150,7 @@ def ajax(sub):
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
 
+
 #########################################################
 # API
 #########################################################
@@ -173,7 +171,7 @@ def api(sub):
             # override db_defaults by api input
             for key in request.form:
                 if key in func_args:
-                    func_args[key] = request.form
+                    func_args[key] = request.form[key]
 
             torrent_info = Logic.parse_magnet_uri(request.form['magnet_uri'], **func_args)
             return jsonify({'success': True, 'info': torrent_info})
@@ -185,19 +183,19 @@ def api(sub):
     elif sub == 'download_torrent':
         try:
             if request.method == 'POST':
-                hash = request.form.get('hash', '')
-                if hash in Logic.torrent_cache:
+                info_hash = request.form.get('info_hash', '')
+                if info_hash in Logic.torrent_cache:
                     return jsonify({
                         'success': True, 
-                        'download_url': '/{}/api/{}?hash={}'.format(package_name, sub, hash)
+                        'download_url': '/{}/api/{}?info_hash={}'.format(package_name, sub, info_hash)
                     })
                 else:
                     return jsonify({'success': False, 'log': '캐시에 없는 파일은 다운받을 수 없습니다.'})
             elif request.method == 'GET':
-                hash = request.args.get('hash', '')
-                if hash in Logic.torrent_cache:
-                    torrent_file = Logic.torrent_cache[hash]['file']
-                    torrent_info = Logic.torrent_cache[hash]['info']
+                info_hash = request.args.get('info_hash', '')
+                if info_hash in Logic.torrent_cache:
+                    torrent_file = Logic.torrent_cache[info_hash]['file']
+                    torrent_info = Logic.torrent_cache[info_hash]['info']
                     resp = Response(torrent_file)
                     resp.headers['Content-Type'] = 'application/x-bittorrent'
                     resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_info['name'] + '.torrent'))
@@ -221,7 +219,6 @@ def api(sub):
             
     elif sub == 'from_url':
         try:
-            # TODO: 프록시 적용
             res = requests.get(request.form['torrent_url'])
             res.raise_for_status()                
             torrent_info = Logic.parse_torrent_file(res.content)  

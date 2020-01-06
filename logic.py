@@ -2,30 +2,28 @@
 #########################################################
 # python
 import os
-import sys
 import traceback
-import logging
 import subprocess
 import json
 import time
 import random
-import math
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
+import platform
 
 # third-party
 import requests
 
 # sjva 공용
 from framework import db, scheduler, app
-from framework.job import Job
 from framework.util import Util
 
 # 패키지
 from .plugin import logger, package_name
 from .model import ModelSetting
-#########################################################
 
+
+#########################################################
 
 
 class LimitedSizeDict(OrderedDict):
@@ -51,35 +49,13 @@ class LimitedSizeDict(OrderedDict):
 class Logic(object):
     # 디폴트 세팅값
     db_default = {
-        'auto_start': 'False',
-        'scrape': 'False',
         'use_dht': 'True',
+        'scrape': 'False',
         'force_dht': 'False',
         'timeout': '30',
-        'trackers': json.dumps([
-            'udp://62.138.0.158:6969/announce',
-            'udp://188.241.58.209:6969/announce',
-            'udp://93.158.213.92:1337/announce',
-            'udp://151.80.120.113:2710/announce',
-            'udp://151.80.120.112:2710/announce',
-            'udp://208.83.20.20:6969/announce',
-            'udp://185.19.107.254:80/announce',
-            'udp://5.206.19.247:6969/announce',
-            'udp://37.235.174.46:2710/announce',
-            'udp://89.234.156.205:451/announce',
-            'udp://45.56.74.11:6969/announce',
-            'udp://54.37.235.149:6969/announce',
-            'udp://212.1.226.176:2710/announce',
-            'udp://159.100.245.181:6969/announce',
-            'udp://51.15.226.113:6969/announce',
-            'udp://185.181.60.67:80/announce',
-            'udp://142.44.243.4:1337/announce',
-            'udp://51.15.40.114:80/announce',
-            'udp://176.113.71.19:6961/announce',
-            'udp://184.105.151.164:6969/announce',
-        ]),
+        'trackers': '',
         'cache_size': '10',
-        'tracker_last_update': datetime.now().strftime('%Y-%m-%d'),
+        'tracker_last_update': '1970-01-01',
         'tracker_update_every': '30',
         'libtorrent_build': '191217',
     }
@@ -93,7 +69,7 @@ class Logic(object):
                 if db.session.query(ModelSetting).filter_by(key=key).count() == 0:
                     db.session.add(ModelSetting(key, value))
             db.session.commit()
-        except Exception as e: 
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
 
@@ -111,8 +87,8 @@ class Logic(object):
             #
             # 자동시작 옵션이 있으면 보통 여기서
             #
-            # 토렌트 캐쉬
-            Logic.torrent_cache = LimitedSizeDict(size=ModelSetting.get_int('cache_size'))
+            # 토렌트 캐쉬 초기화
+            Logic.cache_init()
 
             # libtorrent 자동 설치
             new_build = int(plugin_info['install'].split('-')[-1].split('.')[0])
@@ -126,7 +102,7 @@ class Logic(object):
             if tracker_update_every > 0:
                 if (datetime.now() - datetime.strptime(tracker_last_update, '%Y-%m-%d')).days >= tracker_update_every:
                     Logic.update_tracker()
-        except Exception as e: 
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
 
@@ -134,7 +110,7 @@ class Logic(object):
     def plugin_unload():
         try:
             logger.debug('%s plugin_unload', package_name)
-        except Exception as e: 
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
 
@@ -156,6 +132,10 @@ class Logic(object):
 
     # 기본 구조 End
     ##################################################################
+
+    @staticmethod
+    def cache_init():
+        Logic.torrent_cache = LimitedSizeDict(size=ModelSetting.get_int('cache_size'))
 
     @staticmethod
     def tracker_save(req):
@@ -186,9 +166,7 @@ class Logic(object):
 
     @staticmethod
     def install():
-        ret = {}
         try:
-            import platform
             from plugin import plugin_info
             # platform check - whitelist
             if platform.machine() == 'x86_64' and app.config['config']['running_type'] == 'docker':
@@ -200,26 +178,21 @@ class Logic(object):
                 # tar command check
                 if returncode != 0:
                     return {'success': False, 'log': '설치 중 에러 발생 exitcode: {}'.format(returncode)}
-                
+
                 # finally check libtorrent imported
                 lt_ver = Logic.is_installed()
                 if lt_ver:
-                    ret['success'] = True
-                    ret['log'] = 'libtorrent v{}'.format(lt_ver)
                     # 현재 설치된 빌드 번호 업데이트
                     ModelSetting.set('libtorrent_build', plugin_info['install'].split('-')[-1].split('.')[0])
+                    return {'success': True, 'log': 'libtorrent v{}'.format(lt_ver)}
                 else:
-                    ret['success'] = False
-                    ret['log'] = '설치 후 알수없는 에러. 개발자에게 보고바람'
+                    return {'success': False, 'log': '설치 후 알수없는 에러. 개발자에게 보고바람'}
             else:
-                ret['success'] = False
-                ret['log'] = '지원하지 않는 시스템입니다.'
+                return {'succes': False, 'log': '지원하지 않는 시스템입니다.'}
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
-            ret['success'] = False
-            ret['log'] = str(e)
-        return ret
+            return {'success': False, 'log': str(e)}
 
     @staticmethod
     def convert_torrent_info(torrent_info):
@@ -232,17 +205,18 @@ class Logic(object):
         return {
             'name': torrent_info.name(),
             'num_files': torrent_info.num_files(),
-            'total_size': torrent_info.total_size(),    # in byte
-            'info_hash': str(torrent_info.info_hash()), # original type: libtorrent.sha1_hash
+            'total_size': torrent_info.total_size(),  # in byte
+            'info_hash': str(torrent_info.info_hash()),  # original type: libtorrent.sha1_hash
             'num_pieces': torrent_info.num_pieces(),
-            'creator': torrent_info.creator(),
+            'creator': torrent_info.creator() if torrent_info.creator() else 'libtorrent v{}'.format(lt.version),
             'comment': torrent_info.comment(),
             'files': [{'path': file.path, 'size': file.size} for file in torrent_info.files()],
             'magnet_uri': lt.make_magnet_uri(torrent_info),
         }
 
-    @staticmethod            
-    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=30, trackers=None, no_cache=False):
+    @staticmethod
+    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=30, trackers=None,
+                         no_cache=False):
         try:
             import libtorrent as lt
         except ImportError:
@@ -254,13 +228,18 @@ class Logic(object):
         lt_version = [int(v) for v in lt.version.split('.')]
         if [0, 16, 13, 0] < lt_version < [1, 1, 3, 0]:
             # for some reason the info_hash needs to be bytes but it's a struct called sha1_hash
-            if type(params) == type({}):
+            if type({}) == type(params):
                 params['info_hash'] = params['info_hash'].to_bytes()
             else:
                 params.info_hash = params.info_hash.to_bytes()
 
+        # 캐시에 있으면 ...
+        info_hash_from_magnet = str(params['info_hash'] if type({}) == type(params) else params.info_hash)
+        if (not no_cache) and (info_hash_from_magnet in Logic.torrent_cache):
+            return Logic.torrent_cache[info_hash_from_magnet]['info']
+
         # add trackers
-        if type(params) == type({}):
+        if type({}) == type(params):
             if len(params['trackers']) == 0:
                 if trackers is None:
                     trackers = json.loads(ModelSetting.get('trackers'))
@@ -270,11 +249,6 @@ class Logic(object):
                 if trackers is None:
                     trackers = json.loads(ModelSetting.get('trackers'))
                 params.trackers = random.sample(trackers, 5)
-        
-        # 캐시에 있으면 ...
-        info_hash_from_magnet = str(params['info_hash'] if type(params) == type({}) else params.info_hash)
-        if (not no_cache) and (info_hash_from_magnet in Logic.torrent_cache):
-            return Logic.torrent_cache[info_hash_from_magnet]['info']
 
         # session
         session = lt.session()
@@ -310,12 +284,13 @@ class Logic(object):
 
         # create torrent object and generate file stream
         torrent = lt.create_torrent(lt_info)
+        torrent.set_creator('libtorrent v{}'.format(lt.version))    # signature
         torrent_dict = torrent.generate()
         torrent_file = lt.bencode(torrent_dict)
 
         torrent_info = Logic.convert_torrent_info(lt_info)
         torrent_info.update({
-            'trackers': params.trackers if type(params) != type({}) else params['trackers'],
+            'trackers': params.trackers if type({}) != type(params) else params['trackers'],
             'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat(),
             'time': {'total': timeout - timeout_value, 'metadata': timeout - timeout_value},
         })
@@ -338,19 +313,21 @@ class Logic(object):
             })
             torrent_info['time']['scrape'] = timeout - timeout_value
             torrent_info['time']['total'] = torrent_info['time']['metadata'] + torrent_info['time']['scrape']
-            
+
         session.remove_torrent(handle, True)
 
         # caching for later use
-        if Logic.torrent_cache is not None:
-            Logic.torrent_cache[torrent_info['info_hash']] = {
-                'file': torrent_file,
-                'info': torrent_info,
-            }
+        if Logic.torrent_cache is None:
+            Logic.cache_init()
+        Logic.torrent_cache[torrent_info['info_hash']] = {
+            'file': torrent_file,
+            'info': torrent_info,
+        }
         return torrent_info
 
     @staticmethod
     def parse_torrent_file(torrent_file):
+        # torrent_file >> torrent_dict >> lt_info >> torrent_info
         try:
             import libtorrent as lt
         except ImportError:
@@ -363,11 +340,12 @@ class Logic(object):
         torrent_info.update({'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat()})
 
         # caching for later use
-        if Logic.torrent_cache is not None:
-            Logic.torrent_cache[torrent_info['info_hash']] = {
-                'file': torrent_file,
-                'info': torrent_info,
-            }
+        if Logic.torrent_cache is None:
+            Logic.cache_init()
+        Logic.torrent_cache[torrent_info['info_hash']] = {
+            'file': torrent_file,
+            'info': torrent_info,
+        }
         return torrent_info
 
     @staticmethod

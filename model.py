@@ -3,18 +3,19 @@
 # python
 import os
 import traceback
-import json
+
 # third-party
 
 # sjva 공용
 from framework import db, app, path_app_root
+from framework.util import Util
 
 # 패키지
 from .plugin import logger, package_name
 
 
 db_file = os.path.join(path_app_root, 'data', 'db', '%s.db' % package_name)
-app.config['SQLALCHEMY_BINDS'][package_name] = 'sqlite:///%s' % (db_file)
+app.config['SQLALCHEMY_BINDS'][package_name] = 'sqlite:///%s' % db_file
 
 
 class ModelSetting(db.Model):
@@ -55,7 +56,7 @@ class ModelSetting(db.Model):
     @staticmethod
     def get_bool(key):
         try:
-            return (ModelSetting.get(key) == 'True')
+            return ModelSetting.get(key) == 'True'
         except Exception as e:
             logger.error('Exception:%s %s', e, key)
             logger.error(traceback.format_exc())
@@ -76,10 +77,8 @@ class ModelSetting(db.Model):
     @staticmethod
     def to_dict():
         try:
-            from framework.util import Util
             return Util.db_list_to_dict(db.session.query(ModelSetting).all())
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
 #########################################################
-
