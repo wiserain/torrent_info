@@ -18,7 +18,7 @@ from framework.logger import get_logger
 from framework import app, db, scheduler
 
 # 패키지
-package_name = __name__.split('.')[0].split('_sjva')[0]
+package_name = __name__.split('.')[0]
 logger = get_logger(package_name)
 
 from logic import Logic
@@ -41,13 +41,13 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.0.9",
+    "version": "0.0.1.0",
     "name": "torrent_info",
-    "home": "https://github.com/wiserain/torrent_info_sjva",
-    "more": "https://github.com/wiserain/torrent_info_sjva",
+    "home": "https://github.com/wiserain/torrent_info",
+    "more": "https://github.com/wiserain/torrent_info",
     "description": "토렌트 마그넷/파일 정보를 보여주는 플러그인",
     "developer": "wiserain",
-    "zip": "https://github.com/wiserain/torrent_info_sjva/archive/master.zip",
+    "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
     "install": "libtorrent-1.2.3-191227.tar.gz",
 }

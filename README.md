@@ -1,4 +1,4 @@
-# torrent_info_sjva
+# torrent_info
 
 libtorrent를 이용해 마그넷이나 토렌트 파일의 정보를 보여주는 SJVA 플러그인
 
@@ -18,6 +18,9 @@ libtorrent가 설치가능한 모든 환경.
 ## 더 읽어보기
 
 ## Changelog
+
+v0.0.1.0
+- SJVA0.2: 웹 연동 대응
 
 v0.0.0.9
 - LOGIC: 코드 정리, 소소한 수정
