@@ -19,6 +19,8 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.1 - libtorrent-1.2.4-200211.tar.gz
+
 v0.0.1.0
 - SJVA0.2: 웹 연동 대응
 
