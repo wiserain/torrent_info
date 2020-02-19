@@ -15,7 +15,7 @@
             {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc='테스트 결과 iknowwhatyoudownload.com에 노출되지 않음을 확인했습니다. 켜는 것을 권장합니다.') }}
             {{ macros.setting_checkbox('scrape', 'Scrape 사용', value=arg['scrape'], desc='피어 정보도 받아옵니다. 활성 토렌트인지 확인할 때 유용. 대신 오래 걸림.') }}
             {{ macros.setting_input_int('timeout', '대기 시간', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }}
-            {{ macros.setting_input_int('cache_size', '검색 결과 저장', value=arg['cache_size'], min='0', max='256', placeholder='10', desc='최근 검색 결과를 info_hash 기준으로 저장합니다. 단위: 갯수') }}
+            {{ macros.setting_input_int('n_try', '시도 횟수', value=arg['n_try'], min='1', max='256', placeholder='1', desc='최솟값: 1 (처음 한 번만 시도)') }}
             {{ macros.setting_button_with_info([['clear_cache_btn', '재설정']], '검색 결과 비우기', '') }}
             {{ macros.setting_button([['global_setting_save_btn', '저장']]) }}
         </form>
@@ -101,7 +101,7 @@
     function update_cache_status(data) {
         if (data.success) {
             $('#clear_cache_btn').parent().next().html(
-                '<em>현재 ' + data.len.toString() + '/' + data.size.toString() + '개의 토렌트 정보를 저장 중</em>'
+                '<em>현재 ' + data.len.toString() + '개의 토렌트 정보를 저장 중</em>'
             );
         } else {
             $('#clear_cache_btn').parent().next().html(
@@ -118,7 +118,7 @@
             type: "POST",
             cache: false,
             dataType: "json",
-            data: {clear: true, new_size: document.getElementById("cache_size").value},
+            data: {clear: true},
             success: function(data) {
                 update_cache_status(data);
             }

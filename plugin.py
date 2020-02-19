@@ -7,6 +7,7 @@ import os
 import traceback
 import json
 from urllib import quote
+import base64
 
 # third-party
 from flask import Blueprint, request, render_template, redirect, jsonify, Response
@@ -41,7 +42,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.1.1",
+    "version": "0.0.1.2",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -124,11 +125,7 @@ def ajax(sub):
         try:
             if request.form.get('clear', False):
                 Logic.torrent_cache.clear()
-            if 'new_size' in request.form:
-                new_size = max(0, min(256, int(request.form['new_size'])))
-                Logic.torrent_cache.sizeto(new_size)
-                ModelSetting.set('cache_size', str(new_size))
-            return jsonify({'success': True, 'len': len(Logic.torrent_cache), 'size': Logic.torrent_cache.size})
+            return jsonify({'success': True, 'len': len(Logic.torrent_cache)})
         except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -166,6 +163,7 @@ def api(sub):
                 'use_dht': arg['use_dht'] == 'True',
                 'force_dht': arg['force_dht'] == 'True',
                 'timeout': int(arg['timeout']),
+                'n_try': int(arg['n_try']),
                 'trackers': json.loads(arg['trackers']),
             }
             # override db_defaults by api input
@@ -183,22 +181,23 @@ def api(sub):
     elif sub == 'download_torrent':
         try:
             if request.method == 'POST':
-                info_hash = request.form.get('info_hash', '')
-                if info_hash in Logic.torrent_cache:
-                    return jsonify({
-                        'success': True, 
-                        'download_url': '/{}/api/{}?info_hash={}'.format(package_name, sub, info_hash)
-                    })
-                else:
-                    return jsonify({'success': False, 'log': '캐시에 없는 파일은 다운받을 수 없습니다.'})
+                return jsonify({'success': False, 'log': '중지/삭제 예정 기능입니다.'})
+                # info_hash = request.form.get('info_hash', '')
+                # if info_hash in Logic.torrent_cache:
+                #     return jsonify({
+                #         'success': True, 
+                #         'download_url': '/{}/api/{}?info_hash={}'.format(package_name, sub, info_hash)
+                #     })
+                # else:
+                #     return jsonify({'success': False, 'log': '캐시에 없는 파일은 다운받을 수 없습니다.'})
             elif request.method == 'GET':
                 info_hash = request.args.get('info_hash', '')
                 if info_hash in Logic.torrent_cache:
-                    torrent_file = Logic.torrent_cache[info_hash]['file']
+                    torrent_file = base64.b64decode(Logic.torrent_cache[info_hash]['file'])
                     torrent_info = Logic.torrent_cache[info_hash]['info']
                     resp = Response(torrent_file)
                     resp.headers['Content-Type'] = 'application/x-bittorrent'
-                    resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_info['name'] + '.torrent'))
+                    resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_info['name'].encode('utf-8') + '.torrent'))
                     return resp
         except Exception as e: 
             logger.error('Exception:%s', e)

@@ -7,12 +7,13 @@ import subprocess
 import json
 import time
 import random
-from collections import OrderedDict
 from datetime import datetime
 import platform
+# import base64
 
 # third-party
 import requests
+from sqlitedict import SqliteDict
 
 # sjva 공용
 from framework import db, scheduler, app
@@ -20,30 +21,10 @@ from framework.util import Util
 
 # 패키지
 from .plugin import logger, package_name
-from .model import ModelSetting
+from .model import ModelSetting, db_file
 
 
 #########################################################
-
-
-class LimitedSizeDict(OrderedDict):
-    def __init__(self, *args, **kwds):
-        self.size = kwds.pop('size', None)
-        OrderedDict.__init__(self, *args, **kwds)
-        self._limit_size()
-
-    def __setitem__(self, key, value):
-        OrderedDict.__setitem__(self, key, value)
-        self._limit_size()
-
-    def _limit_size(self):
-        if self.size is not None:
-            while len(self) > self.size:
-                self.popitem(last=False)
-
-    def sizeto(self, new_size):
-        self.size = new_size
-        self._limit_size()
 
 
 class Logic(object):
@@ -52,9 +33,9 @@ class Logic(object):
         'use_dht': 'True',
         'scrape': 'False',
         'force_dht': 'False',
-        'timeout': '30',
+        'timeout': '10',
         'trackers': '',
-        'cache_size': '10',
+        'n_try': '3',
         'tracker_last_update': '1970-01-01',
         'tracker_update_every': '30',
         'libtorrent_build': '191217',
@@ -122,8 +103,6 @@ class Logic(object):
                 entity = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
                 entity.value = value
             db.session.commit()
-            # cache size도 변경해줘야...
-            Logic.torrent_cache.sizeto(ModelSetting.get_int('cache_size'))
             return True
         except Exception as e:
             logger.error('Exception:%s', e)
@@ -135,7 +114,9 @@ class Logic(object):
 
     @staticmethod
     def cache_init():
-        Logic.torrent_cache = LimitedSizeDict(size=ModelSetting.get_int('cache_size'))
+        Logic.torrent_cache = SqliteDict(
+            db_file, tablename='plugin_{}_cache'.format(package_name), encode=json.dumps, decode=json.loads, autocommit=True
+        )
 
     @staticmethod
     def tracker_save(req):
@@ -215,8 +196,8 @@ class Logic(object):
         }
 
     @staticmethod
-    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=30, trackers=None,
-                         no_cache=False):
+    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=10, trackers=None,
+                         no_cache=False, n_try=3):
         try:
             import libtorrent as lt
         except ImportError:
@@ -272,21 +253,29 @@ class Logic(object):
         if force_dht:
             handle.force_dht_announce()
 
-        timeout_value = timeout
-        while not handle.has_metadata():
-            time.sleep(0.1)
-            timeout_value -= 0.1
-            if timeout_value <= 0:
-                session.remove_torrent(handle, True)
-                raise Exception('Timed out after {} seconds trying to get metainfo'.format(timeout))
+        for tryid in range(max(n_try,1)):
+            timeout_value = timeout
+            while not handle.has_metadata():
+                time.sleep(0.1)
+                timeout_value -= 0.1
+                if timeout_value <= 0:
+                    logger.debug('Failed to get metadata on trial: {}/{}'.format(tryid+1, n_try))
+                    break
 
-        lt_info = handle.get_torrent_info()
+            if handle.has_metadata():
+                lt_info = handle.get_torrent_info()
+                logger.debug('Successfully get metadata after {} seconds on trial {}'.format(timeout - timeout_value, tryid+1))
+                break
+            else:
+                if tryid+1 == max(n_try,1):
+                    session.remove_torrent(handle, True)
+                    raise Exception('Timed out after {}x{} seconds trying to get metainfo'.format(timeout, n_try))
 
         # create torrent object and generate file stream
         torrent = lt.create_torrent(lt_info)
         torrent.set_creator('libtorrent v{}'.format(lt.version))    # signature
         torrent_dict = torrent.generate()
-        torrent_file = lt.bencode(torrent_dict)
+        # torrent_file = lt.bencode(torrent_dict)
 
         torrent_info = Logic.convert_torrent_info(lt_info)
         torrent_info.update({
@@ -302,17 +291,17 @@ class Logic(object):
                 time.sleep(0.1)
                 timeout_value -= 0.1
                 if timeout_value <= 0:
-                    session.remove_torrent(handle, True)
-                    raise Exception('Timed out after {} seconds trying to get peer info'.format(timeout))
+                    logger.error('Timed out after {} seconds trying to get peer info'.format(timeout))
 
-            torrent_status = handle.status(0)
-
-            torrent_info.update({
-                'seeders': torrent_status.num_complete,
-                'peers': torrent_status.num_incomplete,
-            })
-            torrent_info['time']['scrape'] = timeout - timeout_value
-            torrent_info['time']['total'] = torrent_info['time']['metadata'] + torrent_info['time']['scrape']
+            if handle.status(0).num_complete >= 0:
+                torrent_status = handle.status(0)
+                
+                torrent_info.update({
+                    'seeders': torrent_status.num_complete,
+                    'peers': torrent_status.num_incomplete,
+                })
+                torrent_info['time']['scrape'] = timeout - timeout_value
+                torrent_info['time']['total'] = torrent_info['time']['metadata'] + torrent_info['time']['scrape']
 
         session.remove_torrent(handle, True)
 
@@ -320,7 +309,7 @@ class Logic(object):
         if Logic.torrent_cache is None:
             Logic.cache_init()
         Logic.torrent_cache[torrent_info['info_hash']] = {
-            'file': torrent_file,
+            # 'file': base64.b64encode(torrent_file),
             'info': torrent_info,
         }
         return torrent_info
@@ -343,7 +332,7 @@ class Logic(object):
         if Logic.torrent_cache is None:
             Logic.cache_init()
         Logic.torrent_cache[torrent_info['info_hash']] = {
-            'file': torrent_file,
+            # 'file': base64.b64encode(torrent_file),
             'info': torrent_info,
         }
         return torrent_info

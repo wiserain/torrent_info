@@ -19,6 +19,12 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.2
+- LOGIC: 메모리 대신 db 캐시를 사용하도록
+- LOGIC: 캐시 사이즈 지정/변경 기능 제거
+- LOGIC: 재시도 옵션 추가 (대기 시간을 짧게 재시도 횟수를 늘려서 튜닝)
+- LOGIC: magnet2torrent 기능 잠정 중단
+
 v0.0.1.1 - libtorrent-1.2.4-200211.tar.gz
 
 v0.0.1.0
@@ -55,6 +61,7 @@ v0.0.0.4
 - LOGIC: flask_restful 이용해서 api 정리 (sjva에서 설치가 제거된 것 같음)
 - LOGIC: --no-cache 옵션
 - WEBUI: cosmetic issue, button align, responsive view
-- LOGIC: retry 옵션
+- ~~LOGIC: retry 옵션~~
 - LOGIC: proxy 적용
-- LOGIC: 메모리 캐시에서 db를 이용하는 것은 잠시 보류
+- ~~LOGIC: 메모리 캐시에서 db를 이용하는 것은 잠시 보류~~
+- LOGIC: 해쉬로 된 파일명 변경 기능
