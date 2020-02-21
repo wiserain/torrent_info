@@ -42,7 +42,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.1.2",
+    "version": "0.0.1.3",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -146,6 +146,19 @@ def ajax(sub):
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
+    elif sub == 'torrent_info':
+        try:
+            from torrent_info import Logic as TorrentInfoLogic
+            data = request.form['hash']
+            logger.debug(data)
+            if data.startswith('magnet'):
+                ret = TorrentInfoLogic.parse_magnet_uri(data)
+            else:
+                ret = TorrentInfoLogic.parse_torrent_url(data)
+            return jsonify(ret)
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
 
 
 #########################################################
