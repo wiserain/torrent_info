@@ -19,6 +19,11 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.5
+- LOGIC: size_fmt 추가
+- WEBUI: size_fmt 윈도우의 [JEDEC 100B.01](https://superuser.com/a/938259) standard로 통일
+- WEBUI: 설정 - 기타 탭 생성 및 정리
+
 v0.0.1.2
 - LOGIC: 메모리 대신 db 캐시를 사용하도록
 - LOGIC: 캐시 사이즈 지정/변경 기능 제거

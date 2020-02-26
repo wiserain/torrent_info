@@ -47,7 +47,6 @@
 <script type="text/javascript">
     var package_name = 'torrent_info';
     var current_info = null;
-    var bytes_in_si = true;
     const result_li_div = '<div class="card mt-3 mb-3" id="results-li"></div>';
 
     $(document).ready(function() {
@@ -197,7 +196,7 @@
     function make_table_from_json(data) {
         str = `
         <tr><th>이름</th><td>${data.name}<button id="clicktocopy" class="btn btn-sm btn-light ml-2"><i class="fa fa-copy"></i></button></td></th></tr>
-        <tr><th>전체 크기</th><td>${sizeOf(data.total_size, true)}</td></th></tr>
+        <tr><th>전체 크기</th><td>${data.total_size_fmt}</td></th></tr>
         ${(data.num_files > 1) ? `<tr><th>파일 수</th><td>${data.num_files}</td></th></tr>` : ''}
         ${(data.num_files > 1) ? `<tr><th>파일 리스트</th><td style="padding:0 !important;">${make_filelist(data.files, data.name + '/')}</td></th></tr>` : '' }
         <tr><th>조각 수</th><td>${data.num_pieces}</td></th></tr>
@@ -231,7 +230,7 @@
             str += `
             <tr>
                 <td>${files[i].path.replace(dirname, '')}</td>
-                <td style="text-align: right;">${sizeOf(files[i].size, true)}</td>
+                <td style="text-align: right;">${files[i].size_fmt}</td>
             </tr>`
         }
 
@@ -247,23 +246,6 @@
 
         ul_node = `<ul>${str}</ul>`
         return ul_node;
-    }
-    
-    function sizeOf(bytes, _with) {
-        var thresh = bytes_in_si ? 1000 : 1024;
-        var units = bytes_in_si 
-            ? ['kB','MB','GB','TB','PB','EB','ZB','YB']
-            : ['KiB','MiB','GiB','TiB','PiB','EiB','ZiB','YiB'];
-        // human readable size
-        if(Math.abs(bytes) < thresh) {
-            return _with ? bytes + ' B' : bytes;
-        }
-        var u = -1;
-        do {
-            bytes /= thresh;
-            ++u;
-        } while(Math.abs(bytes) >= thresh && u < units.length - 1);
-        return _with ? bytes.toFixed(2)+' '+units[u] : parseFloat(bytes.toFixed(2));
     }
     
     $("body").on('click', '#item-header', function(e) {

@@ -177,11 +177,12 @@ class Logic(object):
 
     @staticmethod
     def size_fmt(num, suffix='B'):
-        for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
-            if abs(num) < 1024.0:
+        # Windows에서 쓰는 단위로 가자 https://superuser.com/a/938259
+        for unit in ['','K','M','G','T','P','E','Z']:
+            if abs(num) < 1000.0:
                 return "%3.1f %s%s" % (num, unit, suffix)
             num /= 1024.0
-        return "%.1f %s%s" % (num, 'Yi', suffix)
+        return "%.1f %s%s" % (num, 'Y', suffix)
 
     @staticmethod
     def convert_torrent_info(torrent_info):
