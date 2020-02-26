@@ -5,18 +5,17 @@
         {{ macros.m_tab_head_start() }} 
             {{ macros.m_tab_head('일반', true) }} 
             {{ macros.m_tab_head('트래커', false) }} 
+            {{ macros.m_tab_head('기타', false) }} 
         {{ macros.m_tab_head_end() }}
     </nav>
     <div class="tab-content" id="nav-tabContent">
         <!-- 일반 -->
         {{ macros.m_tab_content_start('일반', true) }}
         <form id="setting" name="setting">
-            {{ macros.setting_button_with_info([['install_btn', '설치하기']], 'libtorrent 설치', 'x86_64 alpine 도커만 지원. 네이티브라면 직접 설치 후 새로고침 해 보세요.') }}
             {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc='테스트 결과 iknowwhatyoudownload.com에 노출되지 않음을 확인했습니다. 켜는 것을 권장합니다.') }}
             {{ macros.setting_checkbox('scrape', 'Scrape 사용', value=arg['scrape'], desc='피어 정보도 받아옵니다. 활성 토렌트인지 확인할 때 유용. 대신 오래 걸림.') }}
             {{ macros.setting_input_int('timeout', '대기 시간', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }}
             {{ macros.setting_input_int('n_try', '시도 횟수', value=arg['n_try'], min='1', max='256', placeholder='1', desc='최솟값: 1 (처음 한 번만 시도)') }}
-            {{ macros.setting_button_with_info([['clear_cache_btn', '재설정']], '검색 결과 비우기', '') }}
             {{ macros.setting_button([['global_setting_save_btn', '저장']]) }}
         </form>
         {{ macros.m_tab_content_end() }}
@@ -24,11 +23,18 @@
         <!-- 트래커 -->
         {{ macros.m_tab_content_start('트래커', false) }}
         <form id="setting_tracker" name="setting_tracker">
-            {{ macros.setting_input_textarea('trackers', '보조 트래커', value=arg['trackers'], row='20', desc=['마그넷에 트래커가 없는 경우 보조로 사용합니다. Enter로 구분']) }}
+            {{ macros.setting_input_textarea('trackers', '보조 트래커', value=arg['trackers'], row='19', desc=['마그넷에 트래커가 없는 경우 보조로 사용합니다. Enter로 구분']) }}
             {{ macros.setting_input_int('tracker_update_every', '자동 업데이트', value=arg['tracker_update_every'], min='0', placeholder='15', desc='https://github.com/ngosang/trackerslist의 best_ip 20개를 받아옵니다. 0이면 업데이트 하지 않음. 주기: 일') }}
             {{ macros.setting_button_with_info([['tracker_update_now_btn', '지금 업데이트']], '수동 업데이트', '최근 업데이트: ' ~ arg['tracker_last_update']) }}
             {{ macros.setting_button([['tracker_setting_save_btn', '저장']]) }}
         </form>
+        {{ macros.m_tab_content_end() }}
+
+        <!-- 기타 -->
+        {{ macros.m_tab_content_start('기타', false) }}
+        {{ macros.info_text('plugin_ver', left='플러그인 버전', value=arg['plugin_ver']) }}
+        {{ macros.setting_button_with_info([['install_btn', '설치하기']], 'libtorrent 설치', 'x86_64 alpine 도커만 지원. 네이티브라면 직접 설치 후 새로고침 해 보세요.') }}
+        {{ macros.setting_button_with_info([['clear_cache_btn', '재설정']], '검색 결과 비우기', '') }}        
         {{ macros.m_tab_content_end() }}
 
     </div>
@@ -54,7 +60,9 @@
                     if (data.installed) {
                         $('#install_btn').prop('disabled', true);
                         $('#install_btn').html('설치됨');
-                        $('#install_btn').parent().next().html('<em>libtorrent v' + data.version + '</em>');
+                        $('#install_btn').parent().next().html('<em>libtorrent ' + data.version + '</em>');
+                    } else {
+                        $('.nav-tabs a[href="#기타"]').tab('show');
                     }
                 }
             });

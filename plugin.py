@@ -42,7 +42,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.1.3",
+    "version": "0.0.1.4",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -80,6 +80,7 @@ def detail(sub):
     if sub == 'setting':
         arg = ModelSetting.to_dict()
         arg['trackers'] = '\n'.join(json.loads(arg['trackers']))
+        arg['plugin_ver'] = plugin_info['version']
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'search':
         arg = ModelSetting.to_dict()

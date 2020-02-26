@@ -176,6 +176,14 @@ class Logic(object):
             return {'success': False, 'log': str(e)}
 
     @staticmethod
+    def size_fmt(num, suffix='B'):
+        for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+            if abs(num) < 1024.0:
+                return "%3.1f %s%s" % (num, unit, suffix)
+            num /= 1024.0
+        return "%.1f %s%s" % (num, 'Yi', suffix)
+
+    @staticmethod
     def convert_torrent_info(torrent_info):
         """from libtorrent torrent_info to python dictionary object"""
         try:
@@ -187,11 +195,12 @@ class Logic(object):
             'name': torrent_info.name(),
             'num_files': torrent_info.num_files(),
             'total_size': torrent_info.total_size(),  # in byte
+            'total_size_fmt': Logic.size_fmt(torrent_info.total_size()),  # in byte
             'info_hash': str(torrent_info.info_hash()),  # original type: libtorrent.sha1_hash
             'num_pieces': torrent_info.num_pieces(),
             'creator': torrent_info.creator() if torrent_info.creator() else 'libtorrent v{}'.format(lt.version),
             'comment': torrent_info.comment(),
-            'files': [{'path': file.path, 'size': file.size} for file in torrent_info.files()],
+            'files': [{'path': file.path, 'size': file.size, 'size_fmt': Logic.size_fmt(file.size)} for file in torrent_info.files()],
             'magnet_uri': lt.make_magnet_uri(torrent_info),
         }
 
