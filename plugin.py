@@ -16,7 +16,7 @@ import requests
 
 # sjva 공용
 from framework.logger import get_logger
-from framework import app, db, scheduler
+from framework import app, db, scheduler, check_api
 
 # 패키지
 package_name = __name__.split('.')[0]
@@ -42,7 +42,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.1.5",
+    "version": "0.0.1.6",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -94,6 +94,7 @@ def detail(sub):
 # For UI                                                          
 #########################################################
 @blueprint.route('/ajax/<sub>', methods=['GET', 'POST'])
+@login_required
 def ajax(sub):
     logger.debug('AJAX %s %s', package_name, sub)
     # 설정 저장
@@ -166,6 +167,7 @@ def ajax(sub):
 # API
 #########################################################
 @blueprint.route('/api/<sub>', methods=['GET', 'POST'])
+@check_api
 def api(sub):
     logger.debug('api %s %s', package_name, sub)
     if sub == 'from_magnet':

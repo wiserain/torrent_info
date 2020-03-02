@@ -19,6 +19,9 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.6
+- LOGIC: login_required / check_api 적용
+
 v0.0.1.5
 - LOGIC: size_fmt 추가
 - WEBUI: size_fmt 윈도우의 [JEDEC 100B.01](https://superuser.com/a/938259) standard로 통일
