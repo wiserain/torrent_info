@@ -7,12 +7,10 @@ import os
 import traceback
 import json
 from urllib import quote
-import base64
 
 # third-party
 from flask import Blueprint, request, render_template, redirect, jsonify, Response
 from flask_login import login_required
-import requests
 
 # sjva 공용
 from framework.logger import get_logger
@@ -42,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.1.6",
+    "version": "0.0.1.7",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -76,11 +74,13 @@ def home():
 @blueprint.route('/<sub>')
 @login_required
 def detail(sub):
-    logger.debug('menu %s %s', package_name, sub)
     if sub == 'setting':
         arg = ModelSetting.to_dict()
         arg['trackers'] = '\n'.join(json.loads(arg['trackers']))
         arg['plugin_ver'] = plugin_info['version']
+        from system.model import ModelSetting as SystemModelSetting
+        ddns = SystemModelSetting.get('ddns')
+        arg['api_url_base'] = '%s/%s/api' % (ddns, package_name)
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'search':
         arg = ModelSetting.to_dict()
@@ -96,7 +96,6 @@ def detail(sub):
 @blueprint.route('/ajax/<sub>', methods=['GET', 'POST'])
 @login_required
 def ajax(sub):
-    logger.debug('AJAX %s %s', package_name, sub)
     # 설정 저장
     if sub == 'setting_save':
         try:
@@ -127,8 +126,9 @@ def ajax(sub):
         try:
             if request.form.get('clear', False):
                 Logic.torrent_cache.clear()
-            return jsonify({'success': True, 'len': len(Logic.torrent_cache)})
-        except Exception as e: 
+            info = [val['info'] for _, val in Logic.torrent_cache.iteritems()]
+            return jsonify({'success': True, 'info': info})
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
@@ -149,6 +149,7 @@ def ajax(sub):
             logger.error(traceback.format_exc())
             return jsonify({'success': False, 'log': str(e)})
     elif sub == 'torrent_info':
+        # for global use - default arguments by function itself
         try:
             from torrent_info import Logic as TorrentInfoLogic
             data = request.form['hash']
@@ -158,9 +159,40 @@ def ajax(sub):
             else:
                 ret = TorrentInfoLogic.parse_torrent_url(data)
             return jsonify(ret)
-        except Exception as e: 
+        except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+    elif sub == 'get_torrent_info':
+        # for local use - default arguments from user db
+        try:
+            if request.form['uri_url'].startswith('magnet'):
+                arg = ModelSetting.to_dict()
+                func_args = {
+                    'scrape': arg['scrape'] == 'True',
+                    'use_dht': arg['use_dht'] == 'True',
+                    'force_dht': arg['force_dht'] == 'True',
+                    'timeout': int(arg['timeout']),
+                    'n_try': int(arg['n_try']),
+                }
+                torrent_info = Logic.parse_magnet_uri(request.form['uri_url'], **func_args)
+            else:
+                torrent_info = Logic.parse_torrent_url(request.form['uri_url'])
+            return jsonify({'success': True, 'info': torrent_info})
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return jsonify({'sueecss': False, 'log': str(e)})
+    elif sub == 'get_file_info':
+        try:
+            fs = request.files['file']
+            fs.seek(0)
+            torrent_file = fs.read()
+            torrent_info = Logic.parse_torrent_file(torrent_file)
+            return jsonify({'success': True, 'info': torrent_info})
+        except Exception as e:
+            logger.error('Exception:%s', str(e))
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
 
 
 #########################################################
@@ -169,9 +201,29 @@ def ajax(sub):
 @blueprint.route('/api/<sub>', methods=['GET', 'POST'])
 @check_api
 def api(sub):
-    logger.debug('api %s %s', package_name, sub)
-    if sub == 'from_magnet':
-        try:
+    try:
+        if sub == 'json':
+            if request.form.get('uri', ''):
+                magnet_uri = request.form.get('uri')
+                if not magnet_uri.startswith('magnet'):
+                    magnet_uri = 'magnet:?xt=urn:btih:' + magnet_uri
+
+                arg = ModelSetting.to_dict()
+                # default arguments from db
+                func_args = {
+                    'scrape': arg['scrape'] == 'True',
+                    'use_dht': arg['use_dht'] == 'True',
+                    'timeout': int(arg['timeout']),
+                    'n_try': int(arg['n_try']),
+                }
+                torrent_info = Logic.parse_magnet_uri(magnet_uri, **func_args)
+            elif request.form.get('url', ''):
+                torrent_info = Logic.parse_torrent_url(request.form.get('url'))
+            else:
+                return jsonify({'success': False, 'log': '"uri" or "url" parameter required'})
+            return jsonify({'success': True, 'info': torrent_info})
+        elif sub == 'from_magnet':
+            # will be DEPRECATED!!!
             arg = ModelSetting.to_dict()
             # default arguments from db
             func_args = {
@@ -189,65 +241,7 @@ def api(sub):
 
             torrent_info = Logic.parse_magnet_uri(request.form['magnet_uri'], **func_args)
             return jsonify({'success': True, 'info': torrent_info})
-        except Exception as e:
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            return jsonify({'sueecss': False, 'log': str(e)})
-            
-    elif sub == 'download_torrent':
-        try:
-            if request.method == 'POST':
-                return jsonify({'success': False, 'log': '중지/삭제 예정 기능입니다.'})
-                # info_hash = request.form.get('info_hash', '')
-                # if info_hash in Logic.torrent_cache:
-                #     return jsonify({
-                #         'success': True, 
-                #         'download_url': '/{}/api/{}?info_hash={}'.format(package_name, sub, info_hash)
-                #     })
-                # else:
-                #     return jsonify({'success': False, 'log': '캐시에 없는 파일은 다운받을 수 없습니다.'})
-            elif request.method == 'GET':
-                info_hash = request.args.get('info_hash', '')
-                if info_hash in Logic.torrent_cache:
-                    torrent_file = base64.b64decode(Logic.torrent_cache[info_hash]['file'])
-                    torrent_info = Logic.torrent_cache[info_hash]['info']
-                    resp = Response(torrent_file)
-                    resp.headers['Content-Type'] = 'application/x-bittorrent'
-                    resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_info['name'].encode('utf-8') + '.torrent'))
-                    return resp
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            return jsonify({'success': False, 'log': str(e)})
-            
-    elif sub == 'from_file':
-        try:
-            fs = request.files['file']
-            fs.seek(0)
-            torrent_file = fs.read()
-            torrent_info = Logic.parse_torrent_file(torrent_file)
-            return jsonify({'success': True, 'info': torrent_info})
-        except Exception as e:
-            logger.error('Exception:%s', str(e))
-            logger.error(traceback.format_exc())
-            return jsonify({'success': False, 'log': str(e)})
-            
-    elif sub == 'from_url':
-        try:
-            res = requests.get(request.form['torrent_url'])
-            res.raise_for_status()                
-            torrent_info = Logic.parse_torrent_file(res.content)  
-            return jsonify({'success': True, 'info': torrent_info})
-        except Exception as e:
-            logger.error('Exception:%s', str(e))
-            logger.error(traceback.format_exc())
-            return jsonify({'success': False, 'log': str(e)})
-            
-    elif sub == 'from_cache':
-        try:
-            cached = [val['info'] for key, val in Logic.torrent_cache.iteritems()]
-            return jsonify({'success': True, 'info': cached})
-        except Exception as e:
-            logger.error('Exception:%s', str(e))
-            logger.error(traceback.format_exc())
-            return jsonify({'success': False, 'log': str(e)})
+    except Exception as e:
+        logger.error('Exception:%s', e)
+        logger.error(traceback.format_exc())
+        return jsonify({'sueecss': False, 'log': str(e)})

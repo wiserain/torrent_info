@@ -19,6 +19,11 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.7
+- api로 접근하던 UI 변경
+- magnet2torrent 기능 삭제. 링크는 마그넷으로 대체
+- json api 및 설명 추가 (설정/기타탭)
+
 v0.0.1.6
 - LOGIC: login_required / check_api 적용
 

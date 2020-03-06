@@ -9,7 +9,6 @@ import time
 import random
 from datetime import datetime
 import platform
-# import base64
 
 # third-party
 import requests
@@ -57,7 +56,6 @@ class Logic(object):
     @staticmethod
     def plugin_load():
         try:
-            logger.debug('%s plugin_load', package_name)
             # DB 초기화
             Logic.db_init()
 
@@ -285,7 +283,6 @@ class Logic(object):
         torrent = lt.create_torrent(lt_info)
         torrent.set_creator('libtorrent v{}'.format(lt.version))    # signature
         torrent_dict = torrent.generate()
-        # torrent_file = lt.bencode(torrent_dict)
 
         torrent_info = Logic.convert_torrent_info(lt_info)
         torrent_info.update({
@@ -319,7 +316,6 @@ class Logic(object):
         if Logic.torrent_cache is None:
             Logic.cache_init()
         Logic.torrent_cache[torrent_info['info_hash']] = {
-            # 'file': base64.b64encode(torrent_file),
             'info': torrent_info,
         }
         return torrent_info
@@ -331,6 +327,7 @@ class Logic(object):
             import libtorrent as lt
         except ImportError:
             raise ImportError('libtorrent package required')
+        
         torrent_dict = lt.bdecode(torrent_file)
         lt_info = lt.torrent_info(torrent_dict)
         torrent_info = Logic.convert_torrent_info(lt_info)
@@ -342,7 +339,6 @@ class Logic(object):
         if Logic.torrent_cache is None:
             Logic.cache_init()
         Logic.torrent_cache[torrent_info['info_hash']] = {
-            # 'file': base64.b64encode(torrent_file),
             'info': torrent_info,
         }
         return torrent_info
