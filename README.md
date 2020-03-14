@@ -19,6 +19,8 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.8 - libtorrent-1.2.5-200314.tar.gz
+
 v0.0.1.7
 - api로 접근하던 UI 변경
 - magnet2torrent 기능 삭제. 링크는 마그넷으로 대체
