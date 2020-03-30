@@ -214,6 +214,13 @@ class Logic(object):
         # parameters
         params = lt.parse_magnet_uri(magnet_uri)
 
+        # prevent downloading
+        # https://stackoverflow.com/q/45680113
+        if isinstance(params, dict):
+            params['flags'] |= lt.add_torrent_params_flags_t.flag_upload_mode
+        else:
+            params.flags |= lt.add_torrent_params_flags_t.flag_upload_mode
+
         lt_version = [int(v) for v in lt.version.split('.')]
         if [0, 16, 13, 0] < lt_version < [1, 1, 3, 0]:
             # for some reason the info_hash needs to be bytes but it's a struct called sha1_hash
