@@ -19,6 +19,8 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+v0.0.1.10 - libtorrent-1.2.6-200430.tar.gz
+
 v0.0.1.8 - libtorrent-1.2.5-200314.tar.gz
 
 v0.0.1.7

@@ -2,6 +2,7 @@
 #########################################################
 # python
 import os
+import sys
 import traceback
 import subprocess
 import json
@@ -22,6 +23,7 @@ from framework.util import Util
 from .plugin import logger, package_name
 from .model import ModelSetting, db_file
 
+sys.path.append('/usr/lib/python2.7/site-packages')
 
 #########################################################
 
