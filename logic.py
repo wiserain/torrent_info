@@ -118,9 +118,10 @@ class Logic(object):
 
     @staticmethod
     def cache_init():
-        Logic.torrent_cache = SqliteDict(
-            db_file, tablename='plugin_{}_cache'.format(package_name), encode=json.dumps, decode=json.loads, autocommit=True
-        )
+        if Logic.torrent_cache is None:
+            Logic.torrent_cache = SqliteDict(
+                db_file, tablename='plugin_{}_cache'.format(package_name), encode=json.dumps, decode=json.loads, autocommit=True
+            )
 
     @staticmethod
     def tracker_save(req):
@@ -266,6 +267,7 @@ class Logic(object):
 
         # 캐시에 있으면 ...
         info_hash_from_magnet = str(params['info_hash'] if type({}) == type(params) else params.info_hash)
+        Logic.cache_init()
         if (not no_cache) and (info_hash_from_magnet in Logic.torrent_cache):
             return Logic.torrent_cache[info_hash_from_magnet]['info']
 
@@ -355,8 +357,6 @@ class Logic(object):
         session.remove_torrent(handle, True)
 
         # caching for later use
-        if Logic.torrent_cache is None:
-            Logic.cache_init()
         Logic.torrent_cache[torrent_info['info_hash']] = {
             'info': torrent_info,
         }
@@ -378,8 +378,7 @@ class Logic(object):
         torrent_info.update({'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat()})
 
         # caching for later use
-        if Logic.torrent_cache is None:
-            Logic.cache_init()
+        Logic.cache_init()
         Logic.torrent_cache[torrent_info['info_hash']] = {
             'info': torrent_info,
         }
