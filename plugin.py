@@ -80,7 +80,9 @@ def detail(sub):
         arg['plugin_ver'] = plugin_info['version']
         from system.model import ModelSetting as SystemModelSetting
         ddns = SystemModelSetting.get('ddns')
-        arg['api_url_base'] = '%s/%s/api' % (ddns, package_name)
+        arg['json_api'] = '%s/%s/api/json' % (ddns, package_name)
+        if SystemModelSetting.get_bool('auth_use_apikey'):
+            arg['json_api'] += '?apikey=%s' % SystemModelSetting.get('auth_apikey')
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'search':
         arg = ModelSetting.to_dict()
