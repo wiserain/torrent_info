@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.2.1",
+    "version": "0.0.3.0",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -168,15 +168,7 @@ def ajax(sub):
         # for local use - default arguments from user db
         try:
             if request.form['uri_url'].startswith('magnet'):
-                arg = ModelSetting.to_dict()
-                func_args = {
-                    'scrape': arg['scrape'] == 'True',
-                    'use_dht': arg['use_dht'] == 'True',
-                    'force_dht': arg['force_dht'] == 'True',
-                    'timeout': int(arg['timeout']),
-                    'n_try': int(arg['n_try']),
-                }
-                torrent_info = Logic.parse_magnet_uri(request.form['uri_url'], **func_args)
+                torrent_info = Logic.parse_magnet_uri(request.form['uri_url'])
             else:
                 torrent_info = Logic.parse_torrent_url(request.form['uri_url'])
             return jsonify({'success': True, 'info': torrent_info})
@@ -205,45 +197,28 @@ def ajax(sub):
 def api(sub):
     try:
         if sub == 'json':
-            if request.form.get('uri', ''):
-                magnet_uri = request.form.get('uri')
+            data = request.form.to_dict() if request.method == 'POST' else request.args.to_dict()
+            if data.get('uri', ''):
+                magnet_uri = data.get('uri')
                 if not magnet_uri.startswith('magnet'):
                     magnet_uri = 'magnet:?xt=urn:btih:' + magnet_uri
 
-                arg = ModelSetting.to_dict()
-                # default arguments from db
-                func_args = {
-                    'scrape': arg['scrape'] == 'True',
-                    'use_dht': arg['use_dht'] == 'True',
-                    'timeout': int(arg['timeout']),
-                    'n_try': int(arg['n_try']),
-                }
-                torrent_info = Logic.parse_magnet_uri(magnet_uri, **func_args)
-            elif request.form.get('url', ''):
-                torrent_info = Logic.parse_torrent_url(request.form.get('url'))
-            else:
-                return jsonify({'success': False, 'log': '"uri" or "url" parameter required'})
-            return jsonify({'success': True, 'info': torrent_info})
-        elif sub == 'from_magnet':
-            # will be DEPRECATED!!!
-            arg = ModelSetting.to_dict()
-            # default arguments from db
-            func_args = {
-                'scrape': arg['scrape'] == 'True',
-                'use_dht': arg['use_dht'] == 'True',
-                'force_dht': arg['force_dht'] == 'True',
-                'timeout': int(arg['timeout']),
-                'n_try': int(arg['n_try']),
-                'trackers': json.loads(arg['trackers']),
-            }
-            # override db_defaults by api input
-            for key in request.form:
-                if key in func_args:
-                    func_args[key] = request.form[key]
+                # override db default by api input
+                func_args = {}
+                for k in ['scrape', 'use_dht', 'no_cache']:
+                    if k in data:
+                        func_args[k] = data.get(k).lower() == 'true'
+                for k in ['timeout', 'n_try']:
+                    if k in data:
+                        func_args[k] = int(data.get(k))
 
-            torrent_info = Logic.parse_magnet_uri(request.form['magnet_uri'], **func_args)
+                torrent_info = Logic.parse_magnet_uri(magnet_uri, **func_args)
+            elif data.get('url', ''):
+                torrent_info = Logic.parse_torrent_url(data.get('url'))
+            else:
+                return jsonify({'success': False, 'log': 'At least one of "uri" or "url" parameter required'})
             return jsonify({'success': True, 'info': torrent_info})
     except Exception as e:
         logger.error('Exception:%s', e)
         logger.error(traceback.format_exc())
-        return jsonify({'sueecss': False, 'log': str(e)})
+        return jsonify({'success': False, 'log': str(e)})

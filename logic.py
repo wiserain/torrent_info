@@ -7,7 +7,6 @@ import traceback
 import subprocess
 import json
 import time
-import random
 from datetime import datetime
 import platform
 import urllib
@@ -37,8 +36,7 @@ class Logic(object):
     db_default = {
         'use_dht': 'True',
         'scrape': 'False',
-        'force_dht': 'False',
-        'timeout': '10',
+        'timeout': '15',
         'trackers': '',
         'n_try': '3',
         'tracker_last_update': '1970-01-01',
@@ -240,12 +238,25 @@ class Logic(object):
         }
 
     @staticmethod
-    def parse_magnet_uri(magnet_uri, scrape=False, use_dht=True, force_dht=False, timeout=10, trackers=None,
-                         no_cache=False, n_try=3):
+    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, timeout=None, trackers=None, no_cache=None, n_try=None):
         try:
             import libtorrent as lt
         except ImportError:
             raise ImportError('libtorrent package required')
+
+        # default function arguments from db
+        if scrape is None:
+            scrape = ModelSetting.get_bool('scrape')
+        if use_dht is None:
+            use_dht = ModelSetting.get_bool('use_dht')
+        if timeout is None:
+            timeout = ModelSetting.get_int('timeout')
+        if trackers is None:
+            trackers = json.loads(ModelSetting.get('trackers'))
+        if n_try is None:
+            n_try = ModelSetting.get_int('n_try')
+        if no_cache is None:
+            no_cache = False
 
         # parameters
         params = lt.parse_magnet_uri(magnet_uri)
@@ -274,14 +285,10 @@ class Logic(object):
         # add trackers
         if type({}) == type(params):
             if len(params['trackers']) == 0:
-                if trackers is None:
-                    trackers = json.loads(ModelSetting.get('trackers'))
-                params['trackers'] = random.sample(trackers, 5)
+                params['trackers'] = trackers
         else:
             if len(params.trackers) == 0:
-                if trackers is None:
-                    trackers = json.loads(ModelSetting.get('trackers'))
-                params.trackers = random.sample(trackers, 5)
+                params.trackers = trackers
 
         # session
         session = lt.session()
@@ -302,26 +309,28 @@ class Logic(object):
         # handle
         handle = session.add_torrent(params)
 
-        if force_dht:
+        if use_dht:
             handle.force_dht_announce()
 
-        for tryid in range(max(n_try,1)):
+        max_try = max(n_try,1)
+        for tryid in range(max_try):
             timeout_value = timeout
+            logger.debug('Trying to get metadata ... {}/{}'.format(tryid+1, max_try))
             while not handle.has_metadata():
                 time.sleep(0.1)
                 timeout_value -= 0.1
                 if timeout_value <= 0:
-                    logger.debug('Failed to get metadata on trial: {}/{}'.format(tryid+1, n_try))
                     break
 
             if handle.has_metadata():
                 lt_info = handle.get_torrent_info()
-                logger.debug('Successfully get metadata after {} seconds on trial {}'.format(timeout - timeout_value, tryid+1))
+                logger.debug('Successfully got metadata after {}*{}+{} seconds'.format(tryid, timeout, timeout - timeout_value))
+                time_metadata = tryid * timeout + (timeout - timeout_value)
                 break
             else:
-                if tryid+1 == max(n_try,1):
+                if tryid+1 == max_try:
                     session.remove_torrent(handle, True)
-                    raise Exception('Timed out after {}x{} seconds trying to get metainfo'.format(timeout, n_try))
+                    raise Exception('Timed out after {}*{} seconds'.format(max_try, timeout))
 
         # create torrent object and generate file stream
         torrent = lt.create_torrent(lt_info)
@@ -332,27 +341,35 @@ class Logic(object):
         torrent_info.update({
             'trackers': params.trackers if type({}) != type(params) else params['trackers'],
             'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat(),
-            'time': {'total': timeout - timeout_value, 'metadata': timeout - timeout_value},
+            'time': {'total': time_metadata, 'metadata': time_metadata},
         })
 
         if scrape:
             # start scraping
-            timeout_value = timeout
-            while handle.status(0).num_complete < 0:
-                time.sleep(0.1)
-                timeout_value -= 0.1
-                if timeout_value <= 0:
-                    logger.error('Timed out after {} seconds trying to get peer info'.format(timeout))
+            for tryid in range(max_try):
+                timeout_value = timeout
+                logger.debug('Trying to get peerinfo ... {}/{}'.format(tryid+1, max_try))
+                while handle.status(0).num_complete < 0:
+                    time.sleep(0.1)
+                    timeout_value -= 0.1
+                    if timeout_value <= 0:
+                        break
 
-            if handle.status(0).num_complete >= 0:
-                torrent_status = handle.status(0)
-                
-                torrent_info.update({
-                    'seeders': torrent_status.num_complete,
-                    'peers': torrent_status.num_incomplete,
-                })
-                torrent_info['time']['scrape'] = timeout - timeout_value
-                torrent_info['time']['total'] = torrent_info['time']['metadata'] + torrent_info['time']['scrape']
+                if handle.status(0).num_complete >= 0:
+                    torrent_status = handle.status(0)
+                    logger.debug('Successfully got peerinfo after {}*{}+{} seconds'.format(tryid, timeout, timeout - timeout_value))
+                    time_scrape = tryid * timeout + (timeout - timeout_value)
+                    
+                    torrent_info.update({
+                        'seeders': torrent_status.num_complete,
+                        'peers': torrent_status.num_incomplete,
+                    })
+                    torrent_info['time']['scrape'] = time_scrape
+                    torrent_info['time']['total'] = torrent_info['time']['metadata'] + torrent_info['time']['scrape']
+                    break
+                else:
+                    if tryid+1 == max_try:
+                        logger.error('Timed out after {}*{} seconds'.format(max_try, timeout))
 
         session.remove_torrent(handle, True)
 
