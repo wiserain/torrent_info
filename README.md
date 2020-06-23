@@ -19,6 +19,8 @@ libtorrent가 설치가능한 모든 환경.
 
 ## Changelog
 
+이후로는 [GITHUB commit](https://github.com/wiserain/torrent_info/commits/master)을 참고해 주세요.
+
 v0.0.2.0
 
 - libtorrent 설치 개선 (arm 지원)
@@ -90,10 +92,13 @@ v0.0.0.4
 
 ## TODO
 
-- LOGIC: flask_restful 이용해서 api 정리 (sjva에서 설치가 제거된 것 같음)
-- LOGIC: --no-cache 옵션
-- WEBUI: cosmetic issue, button align, responsive view
-- ~~LOGIC: retry 옵션~~
-- LOGIC: proxy 적용
-- ~~LOGIC: 메모리 캐시에서 db를 이용하는 것은 잠시 보류~~
-- LOGIC: 해쉬로 된 파일명 변경 기능
+- [ ] LOGIC: flask_restful 이용해서 api 정리 (sjva에서 설치가 제거된 것 같음)
+- [ ] LOGIC: --no-cache 옵션
+- [ ] WEBUI: cosmetic issue, button align, responsive view
+- [ ] LOGIC: proxy 적용
+- [ ] LOGIC: 해쉬로 된 파일명 변경 기능
+- [ ] WEBUI: load more
+- [ ] LOGIC: 트래커 챌린지
+- [ ] LOGIC: 설치 프로세스에 api 적용
+- [x] LOGIC: retry 옵션
+- [x] LOGIC: 메모리 캐시에서 db를 이용하는 것은 잠시 보류

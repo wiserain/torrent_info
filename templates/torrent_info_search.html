@@ -148,8 +148,8 @@
     }
 
     function render_single_item(data, show_info=true) {
-        let torrent_file_name = data.name;
-        let torrent_file_href = data.magnet_uri;
+        let torrent_file_name = data.name + '.torrent';
+        let torrent_file_href = '/' + package_name + '/ajax/get_torrent_file?uri=magnet:?xt=urn:btih:' + data.info_hash;
         let etime = ("time" in data) ? data.time.total.toFixed(3) + ' 초' : '';
         str = `
         <div class="card-header" id="item-header">

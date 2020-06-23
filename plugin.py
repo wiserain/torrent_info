@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.3.0",
+    "version": "0.0.4.0",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -48,7 +48,7 @@ plugin_info = {
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
-    "install": "1.2.7-200531",
+    "install": "1.2.7-200620",
 }
 #########################################################
 
@@ -83,6 +83,9 @@ def detail(sub):
         arg['json_api'] = '%s/%s/api/json' % (ddns, package_name)
         if SystemModelSetting.get_bool('auth_use_apikey'):
             arg['json_api'] += '?apikey=%s' % SystemModelSetting.get('auth_apikey')
+        arg['m2t_api'] = '%s/%s/api/m2t' % (ddns, package_name)
+        if SystemModelSetting.get_bool('auth_use_apikey'):
+            arg['m2t_api'] += '?apikey=%s' % SystemModelSetting.get('auth_apikey')
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'search':
         arg = ModelSetting.to_dict()
@@ -175,7 +178,7 @@ def ajax(sub):
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
-            return jsonify({'sueecss': False, 'log': str(e)})
+            return jsonify({'success': False, 'log': str(e)})
     elif sub == 'get_file_info':
         try:
             fs = request.files['file']
@@ -186,6 +189,19 @@ def ajax(sub):
         except Exception as e:
             logger.error('Exception:%s', str(e))
             logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'log': str(e)})
+    elif sub == 'get_torrent_file' and request.method == 'GET':
+        try:
+            data = request.args.to_dict()
+            magnet_uri = data.get('uri', '')
+            if not magnet_uri.startswith('magnet'):
+                magnet_uri = 'magnet:?xt=urn:btih:' + magnet_uri
+            torrent_file, torrent_name = Logic.parse_magnet_uri(magnet_uri, no_cache=True, to_torrent=True)
+            resp = Response(torrent_file)
+            resp.headers['Content-Type'] = 'application/x-bittorrent'
+            resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_name + '.torrent'))
+            return resp
+        except Exception as e:
             return jsonify({'success': False, 'log': str(e)})
 
 
@@ -218,6 +234,29 @@ def api(sub):
             else:
                 return jsonify({'success': False, 'log': 'At least one of "uri" or "url" parameter required'})
             return jsonify({'success': True, 'info': torrent_info})
+
+        elif sub == 'm2t':
+            if request.method == 'POST':
+                return jsonify({'success': False, 'log': 'POST method not allowed'})
+            data = request.args.to_dict()
+            magnet_uri = data.get('uri', '')
+            if not magnet_uri.startswith('magnet'):
+                magnet_uri = 'magnet:?xt=urn:btih:' + magnet_uri
+
+            # override db default by api input
+            func_args = {}
+            for k in ['scrape', 'use_dht']:
+                if k in data:
+                    func_args[k] = data.get(k).lower() == 'true'
+            for k in ['timeout', 'n_try']:
+                if k in data:
+                    func_args[k] = int(data.get(k))
+            func_args.update({'no_cache': True, 'to_torrent': True})
+            torrent_file, torrent_name = Logic.parse_magnet_uri(magnet_uri, **func_args)
+            resp = Response(torrent_file)
+            resp.headers['Content-Type'] = 'application/x-bittorrent'
+            resp.headers['Content-Disposition'] = "attachment; filename*=UTF-8''{}".format(quote(torrent_name + '.torrent'))
+            return resp
     except Exception as e:
         logger.error('Exception:%s', e)
         logger.error(traceback.format_exc())
