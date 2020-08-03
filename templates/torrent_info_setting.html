@@ -12,7 +12,10 @@
         <!-- 일반 -->
         {{ macros.m_tab_content_start('일반', true) }}
         <form id="setting" name="setting">
-            {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc='테스트 결과 iknowwhatyoudownload.com에 노출되지 않음을 확인했습니다. 켜는 것을 권장합니다.') }}
+            {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc=['트래커 없이 마그넷 정보를 받아올 수 있지만 iknowwhatyoudownload에 노출될 수 있습니다.', '끄면 실패할 확률이 높아지고 시간이 오래 걸립니다.']) }}
+            <div id="use_dht_div" class="collapse">
+            {{ macros.setting_checkbox('use_dht_as_fallback', '보조로만 DHT 사용', value=arg['use_dht_as_fallback'], desc='On: 트래커 실패 시에만 DHT 사용, Off: 상관없이 언제나 DHT 사용') }}
+            </div>
             {{ macros.setting_checkbox('scrape', 'Scrape 사용', value=arg['scrape'], desc='피어 정보도 받아옵니다. 활성 토렌트인지 확인할 때 유용. 대신 오래 걸림.') }}
             {{ macros.setting_input_int('timeout', '대기 시간', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }}
             {{ macros.setting_input_int('n_try', '시도 횟수', value=arg['n_try'], min='1', max='256', placeholder='1', desc='최솟값: 1 (처음 한 번만 시도)') }}
@@ -53,6 +56,8 @@
 
     $(document).ready(function() {
 
+        use_collapse("use_dht");
+        
         $(function() {
             $.ajax({
                 url: '/' + package_name + '/ajax/is_installed',
@@ -186,6 +191,10 @@
                 }
             }
         });
+    });
+
+    $('#use_dht').change(function() {
+        use_collapse('use_dht');
     });
 
 </script>

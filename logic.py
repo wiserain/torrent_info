@@ -92,6 +92,7 @@ class Logic(object):
     # 디폴트 세팅값
     db_default = {
         'use_dht': 'True',
+        'use_dht_as_fallback': 'False',
         'scrape': 'False',
         'timeout': '15',
         'trackers': '',
@@ -295,7 +296,7 @@ class Logic(object):
         }
 
     @staticmethod
-    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, timeout=None, trackers=None, no_cache=None, n_try=None, to_torrent=None):
+    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, use_dht_as_fallback=None, timeout=None, trackers=None, no_cache=None, n_try=None, to_torrent=None):
         try:
             import libtorrent as lt
         except ImportError:
@@ -306,6 +307,8 @@ class Logic(object):
             scrape = ModelSetting.get_bool('scrape')
         if use_dht is None:
             use_dht = ModelSetting.get_bool('use_dht')
+        if use_dht_as_fallback is None:
+            use_dht_as_fallback = ModelSetting.get_bool('use_dht_as_fallback')
         if timeout is None:
             timeout = ModelSetting.get_int('timeout')
         if trackers is None:
@@ -350,20 +353,32 @@ class Logic(object):
                 params.trackers = trackers
 
         # session
-        session = lt.session()
+        settings = {
+            # basics
+            # 'user_agent': 'libtorrent/' + lt.__version__,
+            'listen_interfaces': '0.0.0.0:6881,0.0.0.0:6891',
+            # dht
+            'enable_dht': use_dht,
+            'use_dht_as_fallback': use_dht_as_fallback,
+            'dht_bootstrap_nodes': 'router.bittorrent.com:6881,dht.transmissionbt.com:6881,router.utorrent.com:6881,127.0.0.1:6881',
+            'enable_lsd': False,
+            'enable_upnp': True,
+            'enable_natpmp': True,
+            'announce_to_all_tiers': True,
+            'announce_to_all_trackers': True,
+            # 'anonymous_mode': 
+            'aio_threads': 4*2,
+            'checking_mem_usage': 1024*2,
+            # # proxy
+            # 'proxy_hostname': '',
+            # 'proxy_type': lt.proxy_type_t.http,
+            # 'proxy_port': 0,
+        }
+        session = lt.session(settings)
 
-        session.listen_on(6881, 6891)
-
-        session.add_extension('ut_metadata')
-        session.add_extension('ut_pex')
-        session.add_extension('metadata_transfer')
-
-        if use_dht:
-            session.add_dht_router('router.utorrent.com', 6881)
-            session.add_dht_router('router.bittorrent.com', 6881)
-            session.add_dht_router("dht.transmissionbt.com", 6881)
-            session.add_dht_router('127.0.0.1', 6881)
-            session.start_dht()
+        # session.add_extension('ut_metadata')
+        # session.add_extension('ut_pex')
+        # session.add_extension('metadata_transfer')
 
         # handle
         handle = session.add_torrent(params)
