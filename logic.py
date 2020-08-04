@@ -92,7 +92,6 @@ class Logic(object):
     # 디폴트 세팅값
     db_default = {
         'use_dht': 'True',
-        'use_dht_as_fallback': 'False',
         'scrape': 'False',
         'timeout': '15',
         'trackers': '',
@@ -296,7 +295,7 @@ class Logic(object):
         }
 
     @staticmethod
-    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, use_dht_as_fallback=None, timeout=None, trackers=None, no_cache=None, n_try=None, to_torrent=None):
+    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, timeout=None, trackers=None, no_cache=None, n_try=None, to_torrent=None):
         try:
             import libtorrent as lt
         except ImportError:
@@ -307,8 +306,6 @@ class Logic(object):
             scrape = ModelSetting.get_bool('scrape')
         if use_dht is None:
             use_dht = ModelSetting.get_bool('use_dht')
-        if use_dht_as_fallback is None:
-            use_dht_as_fallback = ModelSetting.get_bool('use_dht_as_fallback')
         if timeout is None:
             timeout = ModelSetting.get_int('timeout')
         if trackers is None:
@@ -359,7 +356,7 @@ class Logic(object):
             'listen_interfaces': '0.0.0.0:6881,0.0.0.0:6891',
             # dht
             'enable_dht': use_dht,
-            'use_dht_as_fallback': use_dht_as_fallback,
+            'use_dht_as_fallback': True,
             'dht_bootstrap_nodes': 'router.bittorrent.com:6881,dht.transmissionbt.com:6881,router.utorrent.com:6881,127.0.0.1:6881',
             'enable_lsd': False,
             'enable_upnp': True,
