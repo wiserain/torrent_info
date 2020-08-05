@@ -99,23 +99,14 @@ class Logic(object):
         'n_try': '3',
         'tracker_last_update': '1970-01-01',
         'tracker_update_every': '30',
-        'tracker_update_from': 'trackers_best',
+        'tracker_update_from': 'best',
         'libtorrent_build': '191217',
         'http_proxy': '',
     }
 
     torrent_cache = None
 
-    tracker_update_from_list = [
-        'trackers_best',
-        'trackers_all',
-        'trackers_udp',
-        'trackers_http',
-        'trackers_https',
-        'trackers_ws',
-        'trackers_best_ip',
-        'trackers_all_ip',
-    ]
+    tracker_update_from_list = ['best', 'all', 'all_udp', 'all_http', 'all_https', 'all_ws', 'best_ip', 'all_ip']
 
     @staticmethod
     def db_init():
@@ -206,7 +197,7 @@ class Logic(object):
     @staticmethod
     def update_tracker():
         # https://github.com/ngosang/trackerslist
-        src_url = 'https://ngosang.github.io/trackerslist/%s.txt' % ModelSetting.get('tracker_update_from')
+        src_url = 'https://ngosang.github.io/trackerslist/trackers_%s.txt' % ModelSetting.get('tracker_update_from')
         new_trackers = requests.get(src_url).content.decode('utf8').split('\n\n')[:-1]
         ModelSetting.set('trackers', json.dumps(new_trackers))
         ModelSetting.set('tracker_last_update', datetime.now().strftime('%Y-%m-%d'))
