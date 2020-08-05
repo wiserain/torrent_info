@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.5.1",
+    "version": "0.0.6.0",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -48,7 +48,7 @@ plugin_info = {
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
-    "install": "1.2.7-200620",
+    "install": "1.2.8-200804",
 }
 #########################################################
 
@@ -77,6 +77,7 @@ def detail(sub):
     if sub == 'setting':
         arg = ModelSetting.to_dict()
         arg['trackers'] = '\n'.join(json.loads(arg['trackers']))
+        arg['tracker_update_from_list'] = [[x, 'https://ngosang.github.io/trackerslist/%s.txt' % x] for x in Logic.tracker_update_from_list]
         arg['plugin_ver'] = plugin_info['version']
         from system.model import ModelSetting as SystemModelSetting
         ddns = SystemModelSetting.get('ddns')

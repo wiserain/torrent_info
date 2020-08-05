@@ -15,6 +15,7 @@ import tarfile
 import tempfile
 import shutil
 import ntpath
+from urlparse import urlparse
 
 # third-party
 import requests
@@ -98,10 +99,23 @@ class Logic(object):
         'n_try': '3',
         'tracker_last_update': '1970-01-01',
         'tracker_update_every': '30',
+        'tracker_update_from': 'trackers_best',
         'libtorrent_build': '191217',
+        'http_proxy': '',
     }
 
     torrent_cache = None
+
+    tracker_update_from_list = [
+        'trackers_best',
+        'trackers_all',
+        'trackers_udp',
+        'trackers_http',
+        'trackers_https',
+        'trackers_ws',
+        'trackers_best_ip',
+        'trackers_all_ip',
+    ]
 
     @staticmethod
     def db_init():
@@ -192,8 +206,8 @@ class Logic(object):
     @staticmethod
     def update_tracker():
         # https://github.com/ngosang/trackerslist
-        trackers_url_from = 'https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best_ip.txt'
-        new_trackers = requests.get(trackers_url_from).content.decode('utf8').split('\n\n')[:-1]
+        src_url = 'https://ngosang.github.io/trackerslist/%s.txt' % ModelSetting.get('tracker_update_from')
+        new_trackers = requests.get(src_url).content.decode('utf8').split('\n\n')[:-1]
         ModelSetting.set('trackers', json.dumps(new_trackers))
         ModelSetting.set('tracker_last_update', datetime.now().strftime('%Y-%m-%d'))
 
@@ -295,7 +309,7 @@ class Logic(object):
         }
 
     @staticmethod
-    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, timeout=None, trackers=None, no_cache=None, n_try=None, to_torrent=None):
+    def parse_magnet_uri(magnet_uri, scrape=None, use_dht=None, timeout=None, trackers=None, no_cache=None, n_try=None, to_torrent=None, http_proxy=None):
         try:
             import libtorrent as lt
         except ImportError:
@@ -316,6 +330,8 @@ class Logic(object):
             no_cache = False
         if to_torrent is None:
             to_torrent = False
+        if http_proxy is None:
+            http_proxy = ModelSetting.get('http_proxy')
 
         # parameters
         params = lt.parse_magnet_uri(magnet_uri)
@@ -353,7 +369,7 @@ class Logic(object):
         settings = {
             # basics
             # 'user_agent': 'libtorrent/' + lt.__version__,
-            'listen_interfaces': '0.0.0.0:6881,0.0.0.0:6891',
+            'listen_interfaces': '0.0.0.0:6881',
             # dht
             'enable_dht': use_dht,
             'use_dht_as_fallback': True,
@@ -363,14 +379,20 @@ class Logic(object):
             'enable_natpmp': True,
             'announce_to_all_tiers': True,
             'announce_to_all_trackers': True,
-            # 'anonymous_mode': 
             'aio_threads': 4*2,
             'checking_mem_usage': 1024*2,
-            # # proxy
-            # 'proxy_hostname': '',
-            # 'proxy_type': lt.proxy_type_t.http,
-            # 'proxy_port': 0,
         }
+        if http_proxy:
+            proxy_url = urlparse(http_proxy)
+            settings.update({
+                'proxy_username': proxy_url.username,
+                'proxy_password': proxy_url.password,
+                'proxy_hostname': proxy_url.hostname,
+                'proxy_port': proxy_url.port,
+                'proxy_type': lt.proxy_type_t.http_pw if proxy_url.username and proxy_url.password else lt.proxy_type_t.http,
+                'force_proxy': True,
+                'anonymous_mode': True,
+            })
         session = lt.session(settings)
 
         # session.add_extension('ut_metadata')
@@ -476,5 +498,10 @@ class Logic(object):
         return torrent_info
 
     @staticmethod
-    def parse_torrent_url(url):
-        return Logic.parse_torrent_file(requests.get(url).content)
+    def parse_torrent_url(url, http_proxy=None):
+        if http_proxy is None:
+            http_proxy = ModelSetting.get('http_proxy')
+        if http_proxy:
+            return Logic.parse_torrent_file(requests.get(url, proxies={'http': http_proxy, 'https': http_proxy}).content)
+        else:
+            return Logic.parse_torrent_file(requests.get(url).content)

@@ -95,7 +95,7 @@ v0.0.0.4
 - [ ] LOGIC: flask_restful 이용해서 api 정리 (sjva에서 설치가 제거된 것 같음)
 - [ ] LOGIC: --no-cache 옵션
 - [ ] WEBUI: cosmetic issue, button align, responsive view
-- [ ] LOGIC: proxy 적용
+- [x] LOGIC: proxy 적용
 - [ ] LOGIC: 해쉬로 된 파일명 변경 기능
 - [ ] WEBUI: load more
 - [ ] LOGIC: 트래커 챌린지

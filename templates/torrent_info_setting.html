@@ -12,10 +12,11 @@
         <!-- 일반 -->
         {{ macros.m_tab_content_start('일반', true) }}
         <form id="setting" name="setting">
-            {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc=['트래커 없이 마그넷 정보를 받아올 수 있지만 iknowwhatyoudownload에 노출될 수 있습니다.', '끄면 실패할 확률이 높아지거나 시간이 오래 걸릴 수 있습니다.']) }}
+            {{ macros.setting_checkbox('use_dht', 'DHT 사용', value=arg['use_dht'], desc=['트래커 없이 마그넷 정보를 받아 오지만 iknowwhatyoudownload에 노출될 수 있습니다. 끄면 실패할 확률이 높아지거나 오래 걸릴 수 있습니다.']) }}
             {{ macros.setting_checkbox('scrape', 'Scrape 사용', value=arg['scrape'], desc='피어 정보도 받아옵니다. 활성 토렌트인지 확인할 때 유용. 대신 오래 걸림.') }}
             {{ macros.setting_input_int('timeout', '대기 시간', value=arg['timeout'], min='1', placeholder='30', desc='마그넷 정보를 받아올때 너무 오래 걸리면 중지합니다. 단위: 초') }}
             {{ macros.setting_input_int('n_try', '시도 횟수', value=arg['n_try'], min='1', max='256', placeholder='1', desc='최솟값: 1 (처음 한 번만 시도)') }}
+            {{ macros.setting_input_text('http_proxy', 'HTTP Proxy', value=arg['http_proxy'], placeholder='Proxy URL을 입력하세요.', desc=['DHT가 꺼지고 모든 연결이 프록시를 통하므로 udp가 아닌 http 트래커가 필요합니다. 비워두면 적용하지 않습니다.']) }}
             {{ macros.setting_button([['global_setting_save_btn', '저장']]) }}
         </form>
         {{ macros.m_tab_content_end() }}
@@ -24,7 +25,8 @@
         {{ macros.m_tab_content_start('트래커', false) }}
         <form id="setting_tracker" name="setting_tracker">
             {{ macros.setting_input_textarea('trackers', '보조 트래커', value=arg['trackers'], row='19', desc=['마그넷에 트래커가 없는 경우 보조로 사용합니다. Enter로 구분']) }}
-            {{ macros.setting_input_int('tracker_update_every', '자동 업데이트', value=arg['tracker_update_every'], min='0', placeholder='15', desc='https://github.com/ngosang/trackerslist의 best_ip 20개를 받아옵니다. 0이면 업데이트 하지 않음. 주기: 일') }}
+            {{ macros.setting_select_and_buttons('tracker_update_from', '트래커 리스트', arg['tracker_update_from_list'], col='9', desc=['업데이트에 사용할 트래커 리스트를 선택하세요. 출처: https://github.com/ngosang/trackerslist'], value=arg['tracker_update_from']) }}
+            {{ macros.setting_input_int('tracker_update_every', '자동 업데이트', value=arg['tracker_update_every'], min='0', placeholder='15', desc='위 리스트로부터 자동으로 받아옵니다. 0이면 업데이트 하지 않음. 주기: 일') }}
             {{ macros.setting_button_with_info([['tracker_update_now_btn', '지금 업데이트']], '수동 업데이트', '최근 업데이트: ' ~ arg['tracker_last_update']) }}
             {{ macros.setting_button([['tracker_setting_save_btn', '저장']]) }}
         </form>
@@ -137,19 +139,6 @@
         });
     });
 
-    // 트래커 업데이트
-    function update_trackers(data) {
-        if (data.success) {
-            $('#tracker_update_now_btn').parent().next().html(
-                '<em>성공적으로 업데이트하였습니다. 새로고침하여 확인</em>'
-            );
-        } else {
-            $('#tracker_update_now_btn').parent().next().html(
-                '<em>문제가 있습니다: ' + data.log + '</em>'
-            );
-        }
-    }
-
     // update_tracker 버튼
     $("body").on('click', '#tracker_update_now_btn', function(e) {
         e.preventDefault();
@@ -160,7 +149,15 @@
             dataType: "json",
             data: {},
             success: function(data) {
-                update_trackers(data);
+                if (data.success) {
+                    $.notify('<strong>성공적으로 업데이트하였습니다.</strong><br>새로고침하여 확인하세요.', {
+                        type: 'success'
+                    });
+                } else {
+                    $.notify('<strong>문제가 있습니다: </strong><br>' + data.log, {
+                        type: 'warning'
+                    });
+                }
             }
         });
     });
