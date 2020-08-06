@@ -97,7 +97,7 @@ v0.0.0.4
 - [ ] WEBUI: cosmetic issue, button align, responsive view
 - [x] LOGIC: proxy 적용
 - [ ] LOGIC: 해쉬로 된 파일명 변경 기능
-- [ ] WEBUI: load more
+- [x] WEBUI: load more
 - [ ] LOGIC: 트래커 챌린지
 - [ ] LOGIC: 설치 프로세스에 api 적용
 - [x] LOGIC: retry 옵션

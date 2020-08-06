@@ -18,6 +18,31 @@
     </div>
     <button id="get_info_url_btn" name="get_info_url_btn" class="btn btn-sm btn-outline-success mb-1">가져오기</button>
 </form>
+
+<div class="card mt-3 mb-3" id="results-li">
+
+<template id="item-template">
+    <div class="card-header" id="item-header">
+        <div class="d-flex w-100 justify-content-between">
+            <h7 class="text-truncate" style="flex: 1;">
+                <a href="" target="_blank" id="torrent_file"></a>
+            </h7>
+            <small text-muted id="elapsed_time"></small>
+        </div>
+    </div>
+    <ul class="list-group list-group-flush collapse" id="item_ul">
+        <li class="list-group-item">
+            <div class="table-responsive" id="tbl_detail"></div>
+        </li>
+    </ul>
+</template>
+
+</div>
+
+<!-- element to trigger the IntersectionObserver -->
+<div class="d-flex justify-content-center mb-3" id="sentinel">
+    <div class="spinner-border" role="status"></div>
+</div>
 <!--전체-->
 
 <style type="text/css">
@@ -42,35 +67,67 @@
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 
 <script type="text/javascript">
     var package_name = 'torrent_info';
-    var current_info = null;
-    const result_li_div = '<div class="card mt-3 mb-3" id="results-li"></div>';
 
-    $(document).ready(function() {
+        // Get references to the dom elements
+    var scroller = document.querySelector("#results-li");
+    var template = document.querySelector('#item-template');
+    {# var loaded = document.querySelector("#loaded"); #}
+    var sentinel = document.querySelector('#sentinel');
 
-        $(function() {
-            $.ajax({
-                url: '/' + package_name + '/ajax/cache',
-                type: "POST",
-                cache: false,
-                data: {},
-                dataType: "json",
-                success: function(data) {
-                    if (data.success) {
-                        if (data.info.length) {
-                            data.info.forEach(function(item){ 
-                                render_single_item(item, false); 
-                            });
-                        }
-                    }
+    var counter = 0;
+
+    // Function to request new items and render to the dom
+    function loadItems() {
+        // Use fetch to request data and pass the counter value in the QS
+        fetch(`/${package_name}/ajax/cache?c=${counter}`).then((response) => {
+            response.json().then((res) => {
+                if (!res.success) {
+                    sentinel.innerHTML = `ERROR: ${res.log}`;
+                    return;
                 }
-            });
-        });
+                var data = res.info;
+                if (!data.length) {
+                    sentinel.innerHTML = "No more items";
+                    return;
+                }
+                // Iterate over the items in the response
+                for (var i = 0; i < data.length; i++) {
+                    render_single_item(data[i], false, false);
+                    // Increment the counter
+                    counter += 1;
+                    // Update the counter in the navbar
+                    {# loaded.innerText = `${counter} items loaded`; #}
+                }
+            })
+        })
+    }
 
+    // Create a new IntersectionObserver instance
+    var intersectionObserver = new IntersectionObserver(entries => {
+        // Uncomment below to see the entry.intersectionRatio when
+        // the sentinel comes into view
+
+        // entries.forEach(entry => {
+        //   console.log(entry.intersectionRatio);
+        // })
+
+        // If intersectionRatio is 0, the sentinel is out of view
+        // and we don't need to do anything. Exit the function
+        if (entries[0].intersectionRatio <= 0) {
+            return;
+        }
+
+        // Call the loadItems function
+        loadItems();
     });
+
+    // Instruct the IntersectionObserver to watch the sentinel
+    intersectionObserver.observe(sentinel);
   
     $(".custom-file-input").on("change", function() {
         var fileName = $(this).val().split("\\").pop();
@@ -147,29 +204,28 @@
         });
     }
 
-    function render_single_item(data, show_info=true) {
+    function render_single_item(data, show_info=true, latest=true) {
         let torrent_file_name = data.name + '.torrent';
         let torrent_file_href = '/' + package_name + '/ajax/get_torrent_file?uri=magnet:?xt=urn:btih:' + data.info_hash;
         let etime = ("time" in data) ? data.time.total.toFixed(3) + ' 초' : '';
-        str = `
-        <div class="card-header" id="item-header">
-            <div class="d-flex w-100 justify-content-between">
-                <h7 class="text-truncate" style="flex: 1;">
-                    <a href="${torrent_file_href}" target="_blank" id="torrent_file">${torrent_file_name}</a>
-                </h7>
-                <small text-muted>${etime}</small>
-            </div>
-        </div>
-        <ul class="list-group list-group-flush collapse${show_info ? ' show' : ''}">
-            <li class="list-group-item">
-                <div class="table-responsive">${make_table_from_json(data)}</div>
-            </li>
-        </ul>
-        `
-        if (!$("#results-li").length) {
-            $("#results-before").after(result_li_div);
+        
+        // Clone the HTML template
+        let template_clone = template.content.cloneNode(true);
+
+        template_clone.querySelector("#torrent_file").innerHTML = torrent_file_name;
+        template_clone.querySelector("#torrent_file").href = torrent_file_href;
+        template_clone.querySelector("#elapsed_time").innerHTML = etime;
+        if (show_info) {
+            template_clone.querySelector("#item_ul").classList.add('show');
         }
-        $("#results-li").prepend(str);
+        template_clone.querySelector("#tbl_detail").innerHTML = `${make_table_from_json(data)}`;
+
+        // Append template to dom
+        if (latest) {
+            scroller.prepend(template_clone);
+        } else {
+            scroller.appendChild(template_clone);
+        }
     }
 
     function make_table_from_json(data) {

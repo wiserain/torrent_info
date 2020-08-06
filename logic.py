@@ -102,6 +102,7 @@ class Logic(object):
         'tracker_update_from': 'best',
         'libtorrent_build': '191217',
         'http_proxy': '',
+        'list_pagesize': '20',
     }
 
     torrent_cache = None

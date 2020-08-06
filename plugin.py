@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.6.1",
+    "version": "0.0.7.0",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -133,6 +133,17 @@ def ajax(sub):
             if request.form.get('clear', False):
                 Logic.torrent_cache.clear()
             info = [val['info'] for _, val in Logic.torrent_cache.iteritems()]
+            info = sorted(info, key=lambda x: x['creation_date'], reverse=True)
+            if request.args.get('c', ''):
+                counter = int(request.args.get('c'))
+                pagesize = ModelSetting.get_int('list_pagesize')
+                if counter == 0:
+                    info = info[:pagesize]
+                elif counter == len(info):
+                    info = []
+                else:
+                    info = info[counter:counter+pagesize]
+                logger.debug('c: %s size info: %s' % (counter, len(info)))
             return jsonify({'success': True, 'info': info})
         except Exception as e:
             logger.error('Exception:%s', e)
