@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.7.0",
+    "version": "0.0.8.0",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -90,6 +90,7 @@ def detail(sub):
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'search':
         arg = ModelSetting.to_dict()
+        arg['cache_size'] = len(Logic.torrent_cache)
         return render_template('%s_search.html' % package_name, arg=arg)
     elif sub == 'log':
         return render_template('log.html', package=package_name)
@@ -130,12 +131,25 @@ def ajax(sub):
             logger.error(traceback.format_exc())
     elif sub == 'cache':
         try:
-            if request.form.get('clear', False):
+            p = request.form.to_dict() if request.method == 'POST' else request.args.to_dict()
+            action = p.get('action', '')
+            infohash = p.get('infohash', '')
+            name = p.get('name', '')
+            if action == 'clear':
                 Logic.torrent_cache.clear()
-            info = [val['info'] for _, val in Logic.torrent_cache.iteritems()]
+            elif action == 'delete' and infohash:
+                if infohash in Logic.torrent_cache:
+                    del Logic.torrent_cache[infohash]
+            # filtering
+            if name:
+                info = [val['info'] for _, val in Logic.torrent_cache.iteritems() if val['info']['name'] == name]
+            elif infohash and infohash in Logic.torrent_cache:
+                info = [Logic.torrent_cache[infohash]['info']]
+            else:
+                info = [val['info'] for _, val in Logic.torrent_cache.iteritems()]
             info = sorted(info, key=lambda x: x['creation_date'], reverse=True)
-            if request.args.get('c', ''):
-                counter = int(request.args.get('c'))
+            if p.get('c', ''):
+                counter = int(p.get('c'))
                 pagesize = ModelSetting.get_int('list_pagesize')
                 if counter == 0:
                     info = info[:pagesize]
@@ -143,8 +157,11 @@ def ajax(sub):
                     info = []
                 else:
                     info = info[counter:counter+pagesize]
-                logger.debug('c: %s size info: %s' % (counter, len(info)))
-            return jsonify({'success': True, 'info': info})
+            # return
+            if action == 'list':
+                return jsonify({'success': True, 'info': info})
+            else:
+                return jsonify({'success': True, 'count': len(info)})
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
