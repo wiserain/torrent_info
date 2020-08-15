@@ -80,7 +80,7 @@
 
 <script type="text/javascript">
     var package_name = 'torrent_info';
-    var current_cache_size = {{arg['cache_size']}}
+    var current_cache_size = "{{arg['cache_size']}}";
 
     // Get references to the dom elements
     var scroller = document.querySelector("#search-history");
@@ -108,7 +108,7 @@
                 }
                 // Iterate over the items in the response
                 for (var i = 0; i < data.length; i++) {
-                    render_single_item(data[i], false, false);
+                    render_single_item(data[i], false);
                     // Increment the counter
                     counter += 1;
                     // Update the counter
@@ -221,7 +221,7 @@
         });
     }
 
-    function render_single_item(data, show_info=true, latest=true) {
+    function render_single_item(data, latest=true) {
         const datetime = new Date(data.creation_date);
         const datetimeFormat = new Intl.DateTimeFormat('en-US', {
             month: 'short',
