@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.8.2",
+    "version": "0.0.8.3",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -125,6 +125,13 @@ def ajax(sub):
                 ret = {'installed': True, 'version': is_installed}
             else:
                 ret = {'installed': False}
+            return jsonify(ret)
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+    elif sub == 'uninstall':
+        try:
+            ret = Logic.uninstall()
             return jsonify(ret)
         except Exception as e: 
             logger.error('Exception:%s', e)

@@ -271,6 +271,15 @@ class Logic(object):
             return {'succes': False, 'log': '지원하지 않는 시스템입니다.'}
 
     @staticmethod
+    def uninstall():
+        # find and delete
+        exitcode = subprocess.check_call(['find', '/usr', '-name', 'libtorrent*', '-delete'])
+        if exitcode == 0:
+            return {'success': True}
+        else:
+            return {'success': False, 'log': 'exitcode: {}'.format(exitcode)}
+
+    @staticmethod
     def size_fmt(num, suffix='B'):
         # Windows에서 쓰는 단위로 가자 https://superuser.com/a/938259
         for unit in ['','K','M','G','T','P','E','Z']:
