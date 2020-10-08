@@ -48,7 +48,7 @@ plugin_info = {
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
-    "install": "1.2.10-200903",
+    "install": "2.0.0-200924",
 }
 #########################################################
 
