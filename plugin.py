@@ -40,7 +40,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.8.4",
+    "version": "0.0.9.0",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -145,16 +145,18 @@ def ajax(sub):
             if action == 'clear':
                 Logic.torrent_cache.clear()
             elif action == 'delete' and infohash:
-                if infohash in Logic.torrent_cache:
-                    del Logic.torrent_cache[infohash]
+                for h in infohash.split(','):
+                    if h and h in Logic.torrent_cache:
+                        del Logic.torrent_cache[h]
             # filtering
             if name:
-                info = [val['info'] for _, val in Logic.torrent_cache.iteritems() if val['info']['name'] == name]
-            elif infohash and infohash in Logic.torrent_cache:
-                info = [Logic.torrent_cache[infohash]['info']]
+                info = [val['info'] for _, val in Logic.torrent_cache.iteritems() if name.strip() in val['info']['name']]
+            elif infohash:
+                info = [Logic.torrent_cache[h]['info'] for h in infohash.split(',') if h and h in Logic.torrent_cache]
             else:
                 info = [val['info'] for _, val in Logic.torrent_cache.iteritems()]
             info = sorted(info, key=lambda x: x['creation_date'], reverse=True)
+            total = len(info)
             if p.get('c', ''):
                 counter = int(p.get('c'))
                 pagesize = ModelSetting.get_int('list_pagesize')
@@ -166,7 +168,7 @@ def ajax(sub):
                     info = info[counter:counter+pagesize]
             # return
             if action == 'list':
-                return jsonify({'success': True, 'info': info})
+                return jsonify({'success': True, 'info': info, 'total': total})
             else:
                 return jsonify({'success': True, 'count': len(info)})
         except Exception as e:
