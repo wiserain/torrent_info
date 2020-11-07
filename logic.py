@@ -220,7 +220,7 @@ class Logic(object):
         # platform check - whitelist
         march = platform.machine()
         if app.config['config']['running_type'] == 'docker' and march in ['x86_64', 'aarch64', 'armv7l']:
-            from plugin import plugin_info
+            from .plugin import plugin_info
             lt_tag = plugin_info['install']
             lt_ver, lt_build = lt_tag.split('-')
 
