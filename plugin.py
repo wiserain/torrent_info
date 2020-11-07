@@ -6,7 +6,10 @@
 import os
 import traceback
 import json
-from urllib import quote
+try:
+    from urllib import quote  # Python 2.X
+except ImportError:
+    from urllib.parse import quote  # Python 3+
 
 # third-party
 from flask import Blueprint, request, render_template, redirect, jsonify, Response
@@ -20,8 +23,8 @@ from framework import app, db, scheduler, check_api
 package_name = __name__.split('.')[0]
 logger = get_logger(package_name)
 
-from logic import Logic
-from model import ModelSetting
+from .logic import Logic
+from .model import ModelSetting
 
 blueprint = Blueprint(
     package_name, package_name,
@@ -40,7 +43,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.9.0",
+    "version": "0.0.9.1",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -76,20 +79,21 @@ def home():
 def detail(sub):
     if sub == 'setting':
         arg = ModelSetting.to_dict()
+        arg['package_name'] = package_name
         arg['trackers'] = '\n'.join(json.loads(arg['trackers']))
         arg['tracker_update_from_list'] = [[x, 'https://ngosang.github.io/trackerslist/trackers_%s.txt' % x] for x in Logic.tracker_update_from_list]
         arg['plugin_ver'] = plugin_info['version']
         from system.model import ModelSetting as SystemModelSetting
         ddns = SystemModelSetting.get('ddns')
         arg['json_api'] = '%s/%s/api/json' % (ddns, package_name)
-        if SystemModelSetting.get_bool('auth_use_apikey'):
-            arg['json_api'] += '?apikey=%s' % SystemModelSetting.get('auth_apikey')
         arg['m2t_api'] = '%s/%s/api/m2t' % (ddns, package_name)
         if SystemModelSetting.get_bool('auth_use_apikey'):
+            arg['json_api'] += '?apikey=%s' % SystemModelSetting.get('auth_apikey')
             arg['m2t_api'] += '?apikey=%s' % SystemModelSetting.get('auth_apikey')
         return render_template('%s_setting.html' % package_name, sub=sub, arg=arg)
     elif sub == 'search':
         arg = ModelSetting.to_dict()
+        arg['package_name'] = package_name
         arg['cache_size'] = len(Logic.torrent_cache)
         return render_template('%s_search.html' % package_name, arg=arg)
     elif sub == 'log':

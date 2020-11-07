@@ -10,12 +10,16 @@ import json
 import time
 from datetime import datetime
 import platform
-import urllib
 import tarfile
 import tempfile
 import shutil
 import ntpath
-from urlparse import urlparse
+try:
+    from urlparse import urlparse
+    from urllib import urlretrieve
+except ImportError:
+    from urllib.parse import urlparse
+    from urllib.request import urlretrieve
 
 # third-party
 import requests
@@ -127,7 +131,7 @@ class Logic(object):
             Logic.db_init()
 
             # 편의를 위해 json 파일 생성
-            from plugin import plugin_info
+            from .plugin import plugin_info
             Util.save_from_dict_to_json(plugin_info, os.path.join(os.path.dirname(__file__), 'info.json'))
 
             #
@@ -232,7 +236,7 @@ class Logic(object):
             url_base = 'https://github.com/wiserain/docker-libtorrent/releases/download/{}/'.format(lt_tag)
             filename = 'libtorrent-{}-alpine3.10-py2-{}.tar.gz'.format(lt_ver, darch)
             try:
-                urllib.urlretrieve(url_base + filename, filename=os.path.join(tmpdir, filename))
+                urlretrieve(url_base + filename, filename=os.path.join(tmpdir, filename))
             except Exception as e:
                 logger.error('Exception:%s', e)
                 logger.error(traceback.format_exc())
@@ -240,7 +244,8 @@ class Logic(object):
                 return {'success': False, 'log': 'libtorrent 다운로드 에러: ' + str(e)}
             
             # download apks
-            exitcode = subprocess.check_call(['apk', 'fetch', '-q', '--no-cache', '-o', tmpdir, 'libstdc++', 'boost-python2', 'boost-system'])
+            apks = ['libstdc++', 'boost-python'+str(sys.version_info[0]), 'boost-system']
+            exitcode = subprocess.check_call(['apk', 'fetch', '-q', '--no-cache', '-o', tmpdir] + apks)
             if exitcode != 0:
                 shutil.rmtree(tmpdir)
                 return {'success': False, 'log': 'apk 다운로드 에러 exitcode: {}'.format(exitcode)}
