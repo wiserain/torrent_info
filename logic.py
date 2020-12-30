@@ -401,9 +401,9 @@ class Logic(object):
             })
         session = lt.session(settings)
 
-        # session.add_extension('ut_metadata')
-        # session.add_extension('ut_pex')
-        # session.add_extension('metadata_transfer')
+        session.add_extension('ut_metadata')
+        session.add_extension('ut_pex')
+        session.add_extension('metadata_transfer')
 
         # handle
         handle = session.add_torrent(params)
