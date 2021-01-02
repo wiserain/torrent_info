@@ -233,8 +233,15 @@ class Logic(object):
                 darch = 'arm64'
             elif march == 'armv7l':
                 darch = 'arm'
+            try:
+                os_ver = re.search(r"([0-9]{1,}\.)+[0-9]{1,}", subprocess.check_output(['cat', '/etc/apk/repositories'])).group()
+            except Exception as e:
+                logger.error('Exception: %s', str(e))
+                logger.error(traceback.format_exc())
+                return {'success': False, 'log': 'OS 버전 판별 에러: {}'.format(str(e))}
+
             url_base = 'https://github.com/wiserain/docker-libtorrent/releases/download/{}/'.format(lt_tag)
-            filename = 'libtorrent-{}-alpine3.10-py2-{}.tar.gz'.format(lt_ver, darch)
+            filename = 'libtorrent-{}-alpine{}-py{}-{}.tar.gz'.format(lt_ver, os_ver, sys.version_info.major, darch)
             try:
                 urlretrieve(url_base + filename, filename=os.path.join(tmpdir, filename))
             except Exception as e:
