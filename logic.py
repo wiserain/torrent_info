@@ -234,7 +234,7 @@ class Logic(object):
             elif march == 'armv7l':
                 darch = 'arm'
             try:
-                os_ver = re.search(r"([0-9]{1,}\.)+[0-9]{1,}", subprocess.check_output(['cat', '/etc/apk/repositories'])).group()
+                os_ver = re.search(r"([0-9]{1,}\.)+[0-9]{1,}", subprocess.check_output(['cat', '/etc/apk/repositories']).decode()).group()
             except Exception as e:
                 logger.error('Exception: %s', str(e))
                 logger.error(traceback.format_exc())
