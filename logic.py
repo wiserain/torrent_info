@@ -501,7 +501,8 @@ class Logic(object):
         torrent_info = Logic.convert_torrent_info(lt_info)
         if b'announce-list' in torrent_dict:
             torrent_info.update({'trackers': [x.decode('utf-8') for x in torrent_dict[b'announce-list'][0]]})
-        torrent_info.update({'creation_date': datetime.fromtimestamp(torrent_dict[b'creation date']).isoformat()})
+        creation_date = torrent_dict[b'creation date'] if b'creation date' in torrent_dict else 0
+        torrent_info.update({'creation_date': datetime.fromtimestamp(creation_date).isoformat()})
 
         # caching for later use
         Logic.cache_init()
