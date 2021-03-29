@@ -43,7 +43,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.9.7",
+    "version": "0.0.9.8",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -51,7 +51,7 @@ plugin_info = {
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
-    "install": "2.0.2-210115",
+    "install": "2.0.3-210329",
 }
 #########################################################
 
