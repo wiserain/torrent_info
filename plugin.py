@@ -43,7 +43,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.9.8",
+    "version": "0.0.9.9",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -51,7 +51,7 @@ plugin_info = {
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
-    "install": "2.0.3-210329",
+    "install": "2.0.3-210401",
 }
 #########################################################
 
@@ -116,12 +116,7 @@ def ajax(sub):
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
     elif sub == 'install':
-        try:
-            ret = Logic.install()
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
+        return jsonify(Logic.install())
     elif sub == 'is_installed':
         try:
             is_installed = Logic.is_installed()
@@ -134,12 +129,7 @@ def ajax(sub):
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
     elif sub == 'uninstall':
-        try:
-            ret = Logic.uninstall()
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
+        return jsonify(Logic.uninstall())
     elif sub == 'cache':
         try:
             p = request.form.to_dict() if request.method == 'POST' else request.args.to_dict()

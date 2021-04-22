@@ -5,21 +5,15 @@ import os
 import re
 import sys
 import traceback
-import subprocess
 import json
 import time
 from datetime import datetime
 import platform
-import tarfile
-import tempfile
-import shutil
 import ntpath
 try:
     from urlparse import urlparse
-    from urllib import urlretrieve
 except ImportError:
     from urllib.parse import urlparse
-    from urllib.request import urlretrieve
 
 # third-party
 import requests
@@ -28,6 +22,7 @@ from sqlitedict import SqliteDict
 # sjva 공용
 from framework import db, scheduler, app
 from framework.util import Util
+from system.logic_command2 import SystemLogicCommand2 as SystemCommand
 
 # 패키지
 from .plugin import logger, package_name
@@ -144,7 +139,7 @@ class Logic(object):
             new_build = int(plugin_info['install'].split('-')[-1])
             installed_build = ModelSetting.get_int('libtorrent_build')
             if (new_build > installed_build) or (not Logic.is_installed()):
-                Logic.install()
+                Logic.install(show_modal=False)
 
             # tracker 자동 업데이트
             tracker_update_every = ModelSetting.get_int('tracker_update_every')
@@ -216,80 +211,46 @@ class Logic(object):
             return False
 
     @staticmethod
-    def install():
-        # platform check - whitelist
-        march = platform.machine()
-        if app.config['config']['running_type'] == 'docker' and march in ['x86_64', 'aarch64', 'armv7l']:
-            from .plugin import plugin_info
-            lt_tag = plugin_info['install']
-            lt_ver, lt_build = lt_tag.split('-')
-
-            tmpdir = tempfile.mkdtemp()
-
-            # download libtorrent
-            if march == 'x86_64':
-                darch = 'amd64'
-            elif march == 'aarch64':
-                darch = 'arm64'
-            elif march == 'armv7l':
-                darch = 'arm'
-            try:
-                os_ver = re.search(r"([0-9]{1,}\.)+[0-9]{1,}", subprocess.check_output(['cat', '/etc/apk/repositories']).decode()).group()
-            except Exception as e:
-                logger.error('Exception: %s', str(e))
-                logger.error(traceback.format_exc())
-                return {'success': False, 'log': 'OS 버전 판별 에러: {}'.format(str(e))}
-
-            url_base = 'https://github.com/wiserain/docker-libtorrent/releases/download/{}/'.format(lt_tag)
-            filename = 'libtorrent-{}-alpine{}-py{}-{}.tar.gz'.format(lt_ver, os_ver, sys.version_info.major, darch)
-            try:
-                urlretrieve(url_base + filename, filename=os.path.join(tmpdir, filename))
-            except Exception as e:
-                logger.error('Exception:%s', e)
-                logger.error(traceback.format_exc())
-                shutil.rmtree(tmpdir)
-                return {'success': False, 'log': 'libtorrent 다운로드 에러: ' + str(e)}
-            
-            # download apks
-            apks = ['libstdc++', 'boost-python'+str(sys.version_info[0]), 'boost-system']
-            exitcode = subprocess.check_call(['apk', 'fetch', '-q', '--no-cache', '-o', tmpdir] + apks)
-            if exitcode != 0:
-                shutil.rmtree(tmpdir)
-                return {'success': False, 'log': 'apk 다운로드 에러 exitcode: {}'.format(exitcode)}
-
-            # installing
-            for filename in os.listdir(tmpdir):
-                try:
-                    tar = tarfile.open(os.path.join(tmpdir, filename))
-                    tar.extractall('/', members=[x for x in tar.getmembers() if x.name.startswith('usr')])
-                    tar.close()
-                except Exception as e:
-                    logger.error('Exception:%s', e)
-                    logger.error(traceback.format_exc())
-                    shutil.rmtree(tmpdir)
-                    return {'success': False, 'log': '{} 설치 중 에러: {}'.format(filename, str(e))}
-
-            shutil.rmtree(tmpdir)
-
-            # finally check libtorrent imported
-            lt_ver = Logic.is_installed()
-            if lt_ver:
-                # 현재 설치된 빌드 번호 업데이트
-                ModelSetting.set('libtorrent_build', lt_build)
-                return {'success': True, 'log': 'libtorrent v{}'.format(lt_ver)}
+    def install(show_modal=True):
+        try:
+            # platform check - whitelist
+            if platform.system() == 'Linux' and app.config['config']['running_type'] == 'docker':
+                from .plugin import plugin_info
+                install_sh = os.path.join(os.path.dirname(__file__), 'install.sh')
+                commands = [
+                    ['msg', u'잠시만 기다려주세요.'],
+                    ['chmod', '+x', install_sh],
+                    [install_sh, plugin_info['install'], str(sys.version_info.major)],
+                    ['msg', u'완료되었습니다.'],
+                ]
+                SystemCommand('libtorrent 설치', commands, wait=True, show_modal=show_modal, clear=True).start()
+                return {'success': True}
             else:
-                return {'success': False, 'log': 'libtorrent 불러올 수 없음. 개발자에게 보고바람'}
-        else:
-            return {'succes': False, 'log': '지원하지 않는 시스템입니다.'}
+                return {'succes': False, 'log': '지원하지 않는 시스템입니다.'}
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return {'success': False, 'log': str(e)}
 
     @staticmethod
     def uninstall():
-        # find and delete
-        exitcode = subprocess.check_call(['find', '/usr', '-name', 'libtorrent*', '-delete'])
-        if exitcode == 0:
-            return {'success': True}
-        else:
-            return {'success': False, 'log': 'exitcode: {}'.format(exitcode)}
+        try:
+            if platform.system() == 'Linux' and app.config['config']['running_type'] == 'docker':
+                install_sh = os.path.join(os.path.dirname(__file__), 'install.sh')
+                commands = [
+                    ['msg', u'잠시만 기다려주세요.'],
+                    ['chmod', '+x', install_sh],
+                    [install_sh, '-delete'],
+                    ['msg', u'완료되었습니다.']
+                ]
+                SystemCommand('libtorrent 삭제', commands, wait=True, show_modal=True, clear=True).start()
+                return {'success': True}
+            else:
+                return {'succes': False, 'log': '지원하지 않는 시스템입니다.'}
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return {'success': False, 'log': str(e)}
 
     @staticmethod
     def size_fmt(num, suffix='B'):

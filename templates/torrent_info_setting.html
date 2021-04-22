@@ -36,7 +36,7 @@
         <!-- 기타 -->
         {{ macros.m_tab_content_start('기타', false) }}
         {{ macros.info_text('plugin_ver', left='플러그인 버전', value=arg['plugin_ver']) }}
-        {{ macros.setting_button_with_info([['install_btn', '설치하기']], 'libtorrent 설치', 'alpine 도커만 지원. 네이티브라면 직접 설치 후 새로고침 해 보세요.') }}
+        {{ macros.setting_button_with_info([['install_btn', '설치하기']], 'libtorrent 설치', 'alpine/ubuntu 도커만 지원. 네이티브라면 직접 설치 후 새로고침 해 보세요.') }}
         {{ macros.setting_button_with_info([['uninstall_btn', '삭제하기']], 'libtorrent 삭제', '설치가 안되면 삭제 후 다시 시도해 보세요.') }}
         {{ macros.setting_button_with_info([['clear_cache_btn', '재설정']], '검색 결과 비우기', '') }}
         {{ macros.m_hr() }}
@@ -100,11 +100,7 @@
             cache: false,
             dataType: "json",
             success: function(data) {
-                if (data.success) {
-                    $.notify('<strong>성공적으로 설치하였습니다.</strong><br>' + data.log, {
-                        type: 'success'
-                    });
-                } else {
+                if (!data.success) {
                     $.notify('<strong>실패하였습니다.</strong><br>' + data.log, {
                         type: 'warning'
                     });
@@ -122,11 +118,7 @@ $("body").on('click', '#uninstall_btn', function(e) {
         cache: false,
         dataType: "json",
         success: function(data) {
-            if (data.success) {
-                $.notify('<strong>삭제하였습니다.</strong>', {
-                    type: 'success'
-                });
-            } else {
+            if (!data.success) {
                 $.notify('<strong>실패하였습니다.</strong><br>' + data.log, {
                     type: 'warning'
                 });
