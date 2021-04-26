@@ -92,20 +92,16 @@ if [ $distro = "ubuntu" ]; then
         echo "Installing runtime packages ..."
         echo "===================================================================="
         echo ""
-        apt-get install -yqq --no-install-recommends \
-            libboost-chrono-dev \
-            libboost-python-dev \
-            libboost-random-dev \
-            libboost-system-dev \
-            libboost-tools-dev
+        apt-get install -y --no-install-recommends \
+            'libboost-python[0-9.]+$'
     else
         echo ""
         echo "===================================================================="
         echo "Installing ubuntu official package as the previous step failed"
         echo "===================================================================="
         echo ""
-        apt-get install -yqq python3-libtorrent || \
-            apt-get install -yqq python-libtorrent
+        apt-get install -y python3-libtorrent || \
+            apt-get install -y python-libtorrent
     fi
 elif [ $distro = "alpine" ]; then
     echo ""
