@@ -43,7 +43,7 @@ def plugin_unload():
 
 plugin_info = {
     "category_name": "torrent",
-    "version": "0.0.9.11",
+    "version": "0.0.9.12",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -144,11 +144,11 @@ def ajax(sub):
                         del Logic.torrent_cache[h]
             # filtering
             if name:
-                info = [val['info'] for _, val in Logic.torrent_cache.iteritems() if name.strip() in val['info']['name']]
+                info = [val['info'] for val in Logic.torrent_cache.values() if name.strip() in val['info']['name']]
             elif infohash:
                 info = [Logic.torrent_cache[h]['info'] for h in infohash.split(',') if h and h in Logic.torrent_cache]
             else:
-                info = [val['info'] for _, val in Logic.torrent_cache.iteritems()]
+                info = [val['info'] for val in Logic.torrent_cache.values()]
             info = sorted(info, key=lambda x: x['creation_date'], reverse=True)
             total = len(info)
             if p.get('c', ''):
