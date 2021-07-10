@@ -22,7 +22,7 @@ class PlugIn(object):
 
     plugin_info = {
         "category_name": "torrent",
-        "version": "0.0.9.12",
+        "version": "0.1.0",
         "name": "torrent_info",
         "home": "https://github.com/wiserain/torrent_info",
         "more": "https://github.com/wiserain/torrent_info",
@@ -30,7 +30,7 @@ class PlugIn(object):
         "developer": "wiserain",
         "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
         "icon": "",
-        "install": "2.0.3-210401",
+        "install": "2.0.4-210709",
     }
     
     menu = {

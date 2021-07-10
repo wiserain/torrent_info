@@ -89,7 +89,7 @@
     var sentinel = document.querySelector('#sentinel');
 
     var counter = 0;
-    var list_total = parseInt("{{arg['cache_size']}}");
+    var list_total = 0;
     var list_url = list_url_base;
 
     // Function to request new items and render to the dom
@@ -102,22 +102,17 @@
                     sentinel.innerHTML = `ERROR: ${res.log}`;
                     return;
                 }
-                var data = res.info;
-                if (res.total) {
-                    list_total = res.total;
-                }
-                if (!data.length) {
-                    sentinel.innerHTML = "No more items";
-                    loaded.innerText = `${counter}/${list_total}`;
-                    return;
-                }
+                list_total = res.total;
                 // Iterate over the items in the response
-                for (var i = 0; i < data.length; i++) {
-                    render_single_item(data[i], false);
+                for (var i = 0; i < res.info.length; i++) {
+                    render_single_item(res.info[i], false);
                     // Increment the counter
                     counter += 1;
                     // Update the counter
                     loaded.innerText = `${counter}/${list_total}`;
+                }
+                if (res.total == counter) {
+                    sentinel.innerHTML = "No more items";
                 }
             })
         })
@@ -150,6 +145,9 @@
         intersectionObserver.unobserve(sentinel);
         scroller.querySelectorAll('*').forEach(n => n.remove());
         counter = 0;
+        list_total = 0;
+        loaded.innerText = `${counter}/${list_total}`;
+        sentinel.innerHTML = `<div class="spinner-border" role="status"></div>`;
         intersectionObserver.observe(sentinel);
     }
 
@@ -191,12 +189,7 @@
     $("body").on('click', '#get_info_url_btn', function(e) {
         e.preventDefault();
         uri_url = document.getElementById("uri_url").value;
-        if (!uri_url) {
-            $.notify('<strong>올바른 주소를 입력하세요!</strong>', {
-                type: 'warning'
-            });
-            return;
-        } else if (uri_url.startsWith("magnet") || uri_url.startsWith("http")) {
+        if (uri_url.startsWith("magnet") || uri_url.startsWith("http")) {
             get_torrent_info(uri_url);
         } else {
             reloadItems(`&name=${uri_url}`);
@@ -234,7 +227,7 @@
             minute: 'numeric'
         });
         let short_magnet = 'magnet:?xt=urn:btih:' + data.info_hash;
-        let etime = ("time" in data) ? data.time.total.toFixed(1) + '초' : '';
+        let etime = ("time" in data) ? data.time.total.toFixed(1) + '초' : 'N/A';
         let torrent_file_href = '/' + package_name + '/ajax/get_torrent_file?uri=' + short_magnet;
         
         // Clone the HTML template
@@ -301,7 +294,7 @@
             </tr>`
         }
 
-        tbl_node = `<table class="table table-sm table-hover">${str}</tbody></table>`
+        tbl_node = `<table class="table table-sm table-hover" style="background-color: transparent;">${str}</tbody></table>`
         return tbl_node;
     }
 
@@ -320,16 +313,9 @@
         if (txt2copy == null) {
             txt2copy = $(this).prev('span').text();
         }
-
-        var $tempElement = $("<input>");
-        $("body").append($tempElement);
-        $tempElement.val(txt2copy).select();
-        document.execCommand("Copy");
-        $tempElement.remove();
-
-        $.notify('<strong>복사하였습니다.</strong><br>' + txt2copy, {
-            type: 'success'
-        });
+        copyToClipboard(txt2copy)
+            .then(() => { $.notify('<strong>복사하였습니다.</strong>', {type: 'success'}); })
+            .catch(() => console.log('clicktocopy failed'));
     });
 
     $("body").on('click', '#view_tbl_details', function(e) {
@@ -447,6 +433,30 @@
                 }
             }
         });
+    }
+
+    // https://stackoverflow.com/a/65996386/9689068
+    // return a promise
+    function copyToClipboard(textToCopy) {
+        // navigator clipboard api needs a secure context (https)
+        if (navigator.clipboard && window.isSecureContext) {
+            // navigator clipboard api method'
+            return navigator.clipboard.writeText(textToCopy);
+        } else {
+            // text area method
+            let textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            // make the textarea out of viewport
+            textArea.style.position = "absolute";
+            textArea.style.opacity = 0;
+            document.body.appendChild(textArea);
+            textArea.select();
+            return new Promise((res, rej) => {
+                // here the magic happens
+                document.execCommand('copy') ? res() : rej();
+                textArea.remove();
+            });
+        }
     }
 
 </script>

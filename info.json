@@ -1,1 +1,12 @@
-{"category_name": "torrent", "version": "0.1.0.0", "name": "torrent_info", "home": "https://github.com/wiserain/torrent_info", "more": "https://github.com/wiserain/torrent_info", "description": "\ud1a0\ub80c\ud2b8 \ub9c8\uadf8\ub137/\ud30c\uc77c \uc815\ubcf4\ub97c \ubcf4\uc5ec\uc8fc\ub294 \ud50c\ub7ec\uadf8\uc778", "developer": "wiserain", "zip": "https://github.com/wiserain/torrent_info/archive/master.zip", "icon": "", "install": "2.0.3-210401"}
+{
+    "category_name": "torrent",
+    "version": "0.1.0",
+    "name": "torrent_info",
+    "home": "https://github.com/wiserain/torrent_info",
+    "more": "https://github.com/wiserain/torrent_info",
+    "description": "토렌트 마그넷/파일 정보를 보여주는 플러그인",
+    "developer": "wiserain",
+    "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
+    "icon": "",
+    "install": "2.0.4-210709"
+}

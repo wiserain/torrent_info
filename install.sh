@@ -42,6 +42,8 @@ fi
 
 # find and delete
 if [ $1 = "-delete" ]; then
+    apt-get remove --purge -yqq python3-libtorrent || \
+        apt-get remove --purge -yqq python-libtorrent
     find /usr -iname "*libtorrent*" -exec rm -rf {} +
     exit 0
 fi
@@ -51,24 +53,9 @@ lt_tag="$1"
 lt_ver=$(echo $lt_tag | cut -d- -f1)
 lt_build=$(echo $lt_tag | cut -d- -f2)
 
-# parsing python version
-pymver="$2"
-case $2 in
-    2)
-        pymver='2'
-        ;;
-    3)
-        pymver='3'
-        ;;
-    *)
-        echo 'python version not supported'
-        exit 2
-        ;;
-esac
-
 # making download url
 url_base="https://github.com/wiserain/docker-libtorrent/releases/download/$lt_tag/"
-filename="libtorrent-$lt_ver-$distro$os_ver-py$pymver-$arch.tar.gz"
+filename="libtorrent-$lt_ver-$distro$os_ver-$arch.tar.gz"
 down_url=$url_base$filename
 
 if [ $distro = "ubuntu" ]; then
@@ -118,18 +105,13 @@ elif [ $distro = "alpine" ]; then
     apk add --no-cache \
         libstdc++ \
         boost-system \
-        boost-python${pymver}
+        boost-python3
 fi
 
 # checking installation
-if [ $pymver != "3" ]; then
-    export PYTHONPATH=/usr/lib/python2.7/site-packages
-    LIBTORRENT_VER=$(python -c 'import libtorrent as lt; print(lt.version)')
-else
-    pyver=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    export PYTHONPATH=/usr/lib/python$pyver/site-packages
-    LIBTORRENT_VER=$(python3 -c 'import libtorrent as lt; print(lt.version)')
-fi
+pyver=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+export PYTHONPATH=/usr/lib/python$pyver/site-packages
+LIBTORRENT_VER=$(python3 -c 'import libtorrent as lt; print(lt.version)')
 
 if [ $? = "0" ]; then
     echo ""

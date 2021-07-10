@@ -177,11 +177,11 @@ class LogicMain(LogicModuleBase):
                             del self.torrent_cache[h]
                 # filtering
                 if name:
-                    info = [val['info'] for val in self.torrent_cache.values() if name.strip() in val['info']['name']]
+                    info = (val['info'] for val in self.torrent_cache.values() if name.strip() in val['info']['name'])
                 elif infohash:
-                    info = [self.torrent_cache[h]['info'] for h in infohash.split(',') if h and h in self.torrent_cache]
+                    info = (self.torrent_cache[h]['info'] for h in infohash.split(',') if h and h in self.torrent_cache)
                 else:
-                    info = [val['info'] for val in self.torrent_cache.values()]
+                    info = (val['info'] for val in self.torrent_cache.values())
                 info = sorted(info, key=lambda x: x['creation_date'], reverse=True)
                 total = len(info)
                 if p.get('c', ''):
@@ -325,7 +325,7 @@ class LogicMain(LogicModuleBase):
         if self.torrent_cache is None:
             db_file = os.path.join(path_data, 'db', f'{package_name}.db')
             self.torrent_cache = SqliteDict(
-                db_file, tablename='plugin_{}_cache'.format(package_name), encode=json.dumps, decode=json.loads, autocommit=True
+                db_file, tablename=f'plugin_{package_name}_cache', encode=json.dumps, decode=json.loads, autocommit=True
             )
 
     def tracker_save(self, req):
@@ -360,7 +360,8 @@ class LogicMain(LogicModuleBase):
                 commands = [
                     ['msg', u'잠시만 기다려주세요.'],
                     ['chmod', '+x', install_sh],
-                    [install_sh, plugin_info['install'], str(sys.version_info.major)],
+                    [install_sh, "-delete"],
+                    [install_sh, plugin_info['install']],
                     ['msg', u'완료되었습니다.'],
                 ]
                 SystemCommand('libtorrent 설치', commands, wait=True, show_modal=show_modal, clear=True).start()
@@ -413,7 +414,7 @@ class LogicMain(LogicModuleBase):
             'total_size_fmt': self.size_fmt(torrent_info.total_size()),  # in byte
             'info_hash': str(torrent_info.info_hash()),  # original type: libtorrent.sha1_hash
             'num_pieces': torrent_info.num_pieces(),
-            'creator': torrent_info.creator() if torrent_info.creator() else 'libtorrent v{}'.format(lt.version),
+            'creator': torrent_info.creator() if torrent_info.creator() else f'libtorrent v{lt.version}',
             'comment': torrent_info.comment(),
             'files': [{'path': file.path, 'size': file.size, 'size_fmt': self.size_fmt(file.size)} for file in torrent_info.files()],
             'magnet_uri': lt.make_magnet_uri(torrent_info),
@@ -518,7 +519,7 @@ class LogicMain(LogicModuleBase):
         max_try = max(n_try,1)
         for tryid in range(max_try):
             timeout_value = timeout
-            logger.debug('Trying to get metadata ... {}/{}'.format(tryid+1, max_try))
+            logger.debug(f'Trying to get metadata ... {tryid+1}/{max_try}')
             while not handle.has_metadata():
                 time.sleep(0.1)
                 timeout_value -= 0.1
@@ -527,17 +528,17 @@ class LogicMain(LogicModuleBase):
 
             if handle.has_metadata():
                 lt_info = handle.get_torrent_info()
-                logger.debug('Successfully got metadata after {}*{}+{} seconds'.format(tryid, timeout, timeout - timeout_value))
+                logger.debug(f'Successfully got metadata after {tryid}*{timeout}+{timeout-timeout_value} seconds')
                 time_metadata = tryid * timeout + (timeout - timeout_value)
                 break
             else:
                 if tryid+1 == max_try:
                     session.remove_torrent(handle, True)
-                    raise Exception('Timed out after {}*{} seconds'.format(max_try, timeout))
+                    raise Exception(f'Timed out after {max_try}*{timeout} seconds')
 
         # create torrent object and generate file stream
         torrent = lt.create_torrent(lt_info)
-        torrent.set_creator('libtorrent v{}'.format(lt.version))    # signature
+        torrent.set_creator(f'libtorrent v{lt.version}')    # signature
         torrent_dict = torrent.generate()
 
         torrent_info = self.convert_torrent_info(lt_info)
@@ -551,7 +552,7 @@ class LogicMain(LogicModuleBase):
             # start scraping
             for tryid in range(max_try):
                 timeout_value = timeout
-                logger.debug('Trying to get peerinfo ... {}/{}'.format(tryid+1, max_try))
+                logger.debug(f'Trying to get peerinfo ... {tryid+1}/{max_try}')
                 while handle.status(0).num_complete < 0:
                     time.sleep(0.1)
                     timeout_value -= 0.1
@@ -560,7 +561,7 @@ class LogicMain(LogicModuleBase):
 
                 if handle.status(0).num_complete >= 0:
                     torrent_status = handle.status(0)
-                    logger.debug('Successfully got peerinfo after {}*{}+{} seconds'.format(tryid, timeout, timeout - timeout_value))
+                    logger.debug(f'Successfully got peerinfo after {tryid}*{timeout}+{timeout-timeout_value} seconds')
                     time_scrape = tryid * timeout + (timeout - timeout_value)
                     
                     torrent_info.update({
@@ -572,7 +573,7 @@ class LogicMain(LogicModuleBase):
                     break
                 else:
                     if tryid+1 == max_try:
-                        logger.error('Timed out after {}*{} seconds'.format(max_try, timeout))
+                        logger.error(f'Timed out after {max_try}*{timeout} seconds')
 
         session.remove_torrent(handle, True)
 
