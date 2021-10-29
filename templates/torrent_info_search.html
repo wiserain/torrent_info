@@ -25,10 +25,11 @@
 </div>
 <!--TODO: 이름으로 검색-->
 
-<div class="mt-3 mb-3" id="search-history">
+<div class="row mt-3 mb-3" id="search-history">
 
 <template id="item-template">
-    <div class="card mb-3 animated fadeIn shadow-sm">
+    <div class="col-lg-6 col-md-12 col-sm-12 col-12 animated fadeIn">
+    <div class="card mb-3 shadow-sm" id="torrent_info">
         <div class="card-body">
             <div class="d-flex w-100 justify-content-between" id="card-title">
                 <h6 class="card-title text-truncate" style="flex: 1;" id="torrent_name" title="토렌트 이름"></h6>
@@ -42,6 +43,7 @@
             {# <a href="#" class="card-link" id="refresh_item">새로고침</a> #}
             <a href="#" class="card-link text-danger" id="remove_item">항목삭제</a>
         </div>
+    </div>
     </div>
 </template>
 
@@ -238,7 +240,7 @@
         // Clone the HTML template
         let template_clone = template.content.cloneNode(true);
 
-        template_clone.querySelector("div").setAttribute("infohash", data.info_hash);
+        template_clone.querySelector("#torrent_info").dataset["infohash"] = data.info_hash;
         template_clone.querySelector("#torrent_name").innerHTML = data.name;
         template_clone.querySelector("#creation_date").title = data.creation_date;
         template_clone.querySelector("#creation_date").innerHTML = datetimeFormat.format(datetime);
@@ -325,15 +327,13 @@
 
     $("body").on('click', '#view_tbl_details', function(e) {
         e.preventDefault();
-        let infohash = $(this).parent().parent().attr('infohash');
-        console.log(infohash);
         $.ajax({
             url: '/' + package_name + '/ajax/cache',
             type: 'POST',
             cache: false,
             data: {
                 'action': 'list',
-                'infohash': infohash
+                'infohash': $(this).closest('#torrent_info').data('infohash')
             },
             dataType: "json",
             success: function (data) {
@@ -352,14 +352,13 @@
 
     $("body").on('click', '#view_raw_json', function(e) {
         e.preventDefault();
-        let infohash = $(this).parent().parent().attr('infohash');
         $.ajax({
             url: '/' + package_name + '/ajax/cache',
             type: 'POST',
             cache: false,
             data: {
                 'action': 'list',
-                'infohash': infohash
+                'infohash': $(this).closest('#torrent_info').data('infohash')
             },
             dataType: "json",
             success: function (data) {
@@ -378,20 +377,19 @@
 
     $("body").on('click', '#remove_item', function(e) {
         e.preventDefault();
-        var card = $(this).parent().parent();
-        let infohash = $(card).attr('infohash');        
+        var card = $(this).closest('#torrent_info');
         $.ajax({
             url: '/' + package_name + '/ajax/cache',
             type: 'POST',
             cache: false,
             data: {
                 'action': 'delete',
-                'infohash': infohash
+                'infohash': $(this).closest('#torrent_info').data('infohash')
             },
             dataType: "json",
             success: function (data) {
                 if (data.success) {
-                    $(card).fadeOut(300, function() { $(card).remove(); });
+                    $(card).fadeOut(300, function() { $(card).parent().remove(); });
                     list_total -= 1;
                     counter -= 1;
                     loaded.innerText = `${counter}/${list_total}`;
@@ -401,13 +399,13 @@
                     });
                 }
             }
-        });        
+        });
     });
     
     $("body").on('click', '#remove_list_items', function(e) {
         e.preventDefault();
         var infohash = [];
-        scroller.querySelectorAll('div.card').forEach(n => infohash.push($(n).attr('infohash')));
+        scroller.querySelectorAll('div.card').forEach(n => infohash.push($(n).data('infohash')));
         document.getElementById("confirm_title").innerHTML = "캐시 삭제";
         document.getElementById("confirm_body").innerHTML = `${infohash.length}개 항목을 삭제합니다.`;
         $('#confirm_button').attr('onclick', 'remove_list_items_from_cache("'+infohash+'");');
