@@ -54,7 +54,7 @@ class LogicMain(LogicModuleBase):
             self.cache_init()
 
             # libtorrent 자동 설치
-            new_build = int(plugin_info["install"].split("-")[-1])
+            new_build = int(plugin_info["install"].rsplit("-", maxsplit=1)[-1])
             installed_build = ModelSetting.get_int("libtorrent_build")
             if (new_build > installed_build) or (not self.is_installed()):
                 self.install(show_modal=False)

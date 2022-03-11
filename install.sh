@@ -54,7 +54,7 @@ lt_ver=$(echo $lt_tag | cut -d- -f1)
 lt_build=$(echo $lt_tag | cut -d- -f2)
 
 # making download url
-url_base="https://github.com/wiserain/docker-libtorrent/releases/download/$lt_tag/"
+url_base="https://github.com/by275/docker-libtorrent/releases/download/$lt_tag/"
 filename="libtorrent-$lt_ver-$distro$os_ver-$arch.tar.gz"
 down_url=$url_base$filename
 
