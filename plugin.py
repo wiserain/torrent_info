@@ -1,9 +1,11 @@
-import os
+from pathlib import Path
 
 # third-party
 from flask import Blueprint
 
 # pylint: disable=import-error
+from framework import app, path_data
+from framework.util import Util
 from framework.logger import get_logger
 from framework.common.plugin import get_model_setting, Logic, default_route_single_module
 
@@ -17,12 +19,12 @@ class PlugIn:
         package_name,
         package_name,
         url_prefix=f"/{package_name}",
-        template_folder=os.path.join(os.path.dirname(__file__), "templates"),
+        template_folder=Path(__file__).parent.joinpath("templates"),
     )
 
     plugin_info = {
         "category_name": "torrent",
-        "version": "0.1.4",
+        "version": "0.1.5",
         "name": "torrent_info",
         "home": "https://github.com/wiserain/torrent_info",
         "more": "https://github.com/wiserain/torrent_info",
@@ -30,7 +32,7 @@ class PlugIn:
         "developer": "wiserain",
         "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
         "icon": "",
-        "install": "2.0.5-220308",
+        "install": "2.0.5-220330",
     }
 
     menu = {
@@ -44,14 +46,10 @@ class PlugIn:
     logic = None
 
     def __init__(self):
-        from framework import app, path_data
-
-        db_file = os.path.join(path_data, "db", f"{self.package_name}.db")
+        db_file = Path(path_data).joinpath("db", f"{self.package_name}.db")
         app.config["SQLALCHEMY_BINDS"][self.package_name] = f"sqlite:///{db_file}"
 
-        from framework.util import Util
-
-        Util.save_from_dict_to_json(self.plugin_info, os.path.join(os.path.dirname(__file__), "info.json"))
+        Util.save_from_dict_to_json(self.plugin_info, Path(__file__).parent.joinpath("info.json"))
 
 
 plugin = PlugIn()
