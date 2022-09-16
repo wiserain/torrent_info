@@ -1,6 +1,6 @@
 {
     "category_name": "torrent",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "name": "torrent_info",
     "home": "https://github.com/wiserain/torrent_info",
     "more": "https://github.com/wiserain/torrent_info",
@@ -8,5 +8,5 @@
     "developer": "wiserain",
     "zip": "https://github.com/wiserain/torrent_info/archive/master.zip",
     "icon": "",
-    "install": "2.0.6-220428"
+    "install": "2.0.7-220718"
 }
